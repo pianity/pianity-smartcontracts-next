@@ -42,36 +42,28 @@ pub enum Action {
     },
 
     #[serde(rename_all = "camelCase")]
-    BalanceOf { token_id: String, target: String },
-    // Configure(ConfigureArgs),
-    //
-    // SetApprovalForAll {
-    //     operator: String,
-    //     approved: bool,
-    // },
-    //
-    // IsApprovedForAll {
-    //     owner: String,
-    //     operator: String,
-    // },
-    //
-    // Evolve {
-    //     value: String,
-    // },
-    //
-    // Batch(BatchArgs),
-    //
-    // #[serde(rename_all = "camelCase")]
-    // ForeignRead {
-    //     contract_tx_id: String,
-    // },
-    //
-    // #[serde(rename_all = "camelCase")]
-    // ForeignWrite {
-    //     contract_tx_id: String,
-    //     qty: u64,
-    //     target: String,
-    // },
+    BalanceOf {
+        token_id: String,
+        target: String,
+    },
+
+    Configure(ConfigureArgs),
+
+    SetApprovalForAll {
+        operator: String,
+        approved: bool,
+    },
+
+    IsApprovedForAll {
+        owner: String,
+        operator: String,
+    },
+
+    Evolve {
+        value: String,
+    },
+
+    Batch(BatchArgs),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -92,4 +84,4 @@ pub enum QueryResponseMsg {
     },
 }
 
-pub type ActionResult = Result<HandlerResult<State, QueryResponseMsg>, ContractError>;
+pub type ActionResult = Result<HandlerResult<QueryResponseMsg>, ContractError>;

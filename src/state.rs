@@ -4,14 +4,14 @@ use std::collections::HashMap;
 pub type Balances = HashMap<String, u64>;
 pub type Approvals = HashMap<String, bool>;
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Token {
     pub ticker: String,
     pub balances: Balances,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub super_owner: String,
@@ -23,7 +23,7 @@ pub struct Settings {
     pub authorized_addresses: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct State {
     pub name: Option<String>,

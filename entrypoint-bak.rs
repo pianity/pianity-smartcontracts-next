@@ -2,7 +2,9 @@
 /////////////// DO NOT MODIFY THIS FILE /////////////
 /////////////////////////////////////////////////////
 
-use std::cell::RefCell;
+use once_cell::sync::OnceCell;
+// use parking_lot::Mutex;
+use std::sync::Mutex;
 
 use serde_json::Error;
 use wasm_bindgen::prelude::*;
@@ -41,29 +43,33 @@ In the future this might also allow to enhance the inner-contracts communication
 - it would allow to read other contract's state "directly" from WASM module memory.
 */
 
-// inspired by https://github.com/dfinity/examples/blob/master/rust/basic_dao/src/basic_dao/src/lib.rs#L13
-thread_local! {
-    static STATE: RefCell<State> = RefCell::default();
+static STATE: OnceCell<Mutex<State>> = OnceCell::new();
+
+fn with_state<R>(data: Mutex<State>, f: impl FnOnce(&mut State) -> R) -> R {
+    let state = &mut data.lock().expect("Could not lock mutex");
+    f(state)
 }
 
 #[wasm_bindgen()]
 pub async fn handle(interaction: JsValue) -> Option<JsValue> {
+    let result: Result<HandlerResult<QueryResponseMsg>, ContractError>;
     let action: Result<Action, Error> = interaction.into_serde();
 
     if action.is_err() {
-        return Some(
-            JsValue::from_serde(&ContractError::RuntimeError(
-                "Error while parsing input".to_string(),
-            ))
-            .unwrap(),
-        );
+        // cannot pass any data from action.error here - ends up with
+        // "FnOnce called more than once" error from wasm-bindgen for
+        // "foreign_call" testcase.
+        result = Err(ContractError::RuntimeError(
+            "Error while parsing input".to_string(),
+        ));
+    } else {
+        // let state = &mut *STATE.get().unwrap().lock().unwrap();
+        let state = STATE.get().unwrap().into_inner().unwrap();
+
+        result = contract::handle(state, action.unwrap()).await;
     }
 
-    let mut state = STATE.with(|service| service.borrow().clone());
-    let result = contract::handle(&mut state, action.unwrap()).await;
-
-    if let Ok(HandlerResult::Write) = result {
-        STATE.with(|service| service.replace(state));
+    if let Ok(HandlerResult::NewState) = result {
         None
     } else {
         Some(JsValue::from_serde(&result).unwrap())
@@ -74,7 +80,7 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
 pub fn init_state(state: &JsValue) {
     let state_parsed: State = state.into_serde().unwrap();
 
-    STATE.with(|service| service.replace(state_parsed));
+    STATE.set(Mutex::new(state_parsed)).unwrap();
 }
 
 #[wasm_bindgen(js_name = currentState)]
@@ -83,8 +89,8 @@ pub fn current_state() -> JsValue {
     // TODO: perf - according to docs:
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
-    let current_state = STATE.with(|service| service.borrow().clone());
-    JsValue::from_serde(&current_state).unwrap()
+    let current_state = STATE.get().unwrap();
+    JsValue::from_serde(current_state).unwrap()
 }
 
 #[wasm_bindgen()]

@@ -4,7 +4,7 @@ use crate::contract_utils::js_imports::Transaction;
 use crate::error::ContractError;
 use crate::state::State;
 
-pub fn configure(mut state: State, args: ConfigureArgs) -> ActionResult {
+pub fn configure(state: &mut State, args: ConfigureArgs) -> ActionResult {
     let caller = Transaction::owner();
 
     if args.super_owner.is_some() && caller != state.settings.super_owner
@@ -27,5 +27,5 @@ pub fn configure(mut state: State, args: ConfigureArgs) -> ActionResult {
         state.settings.authorized_addresses = authorized_addresses;
     }
 
-    return Ok(HandlerResult::NewState(state));
+    return Ok(HandlerResult::Write);
 }

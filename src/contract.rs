@@ -1,3 +1,5 @@
+use async_recursion::async_recursion;
+
 use crate::action::{Action, ActionResult, QueryResponseMsg};
 use crate::actions::approval::{is_approved_for_all, set_approval_for_all};
 use crate::actions::balance::balance_of;
@@ -12,7 +14,8 @@ use crate::contract_utils::js_imports::{log, Block, Contract, SmartWeave, Transa
 use crate::error::ContractError;
 use crate::state::State;
 
-pub async fn handle(state: State, action: Action) -> ActionResult {
+#[async_recursion]
+pub async fn handle(state: &mut State, action: Action) -> ActionResult {
     // for vrf-compatible interactions
     /*log(&("Vrf::value()".to_owned() + &Vrf::value()));
     log(&("Vrf::randomInt()".to_owned() + &Vrf::randomInt(7).to_string()));*/
@@ -35,25 +38,19 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
         } => transfer(state, from, to, token_id, qty),
 
         Action::BalanceOf { token_id, target } => balance_of(state, token_id, target),
-        // Action::Configure(args) => configure(state, args),
-        //
-        //
-        // Action::Evolve { value } => evolve(state, value),
-        //
-        // Action::SetApprovalForAll { operator, approved } => {
-        //     set_approval_for_all(state, operator, approved)
-        // }
-        //
-        // Action::IsApprovedForAll { operator, owner } => is_approved_for_all(state, operator, owner),
-        //
-        // Action::Batch(args) => batch(state, args),
-        //
-        // Action::ForeignRead { contract_tx_id } => foreign_read(state, contract_tx_id).await,
-        //
-        // Action::ForeignWrite {
-        //     contract_tx_id,
-        //     qty,
-        //     target,
-        // } => foreign_write(state, contract_tx_id, qty, target).await,
+
+        Action::Configure(args) => configure(state, args),
+
+        Action::Evolve { value } => evolve(state, value),
+
+        Action::SetApprovalForAll { operator, approved } => {
+            set_approval_for_all(state, operator, approved)
+        }
+
+        Action::IsApprovedForAll { operator, owner } => {
+            is_approved_for_all(&state, operator, owner)
+        }
+
+        Action::Batch(args) => batch(state, args).await,
     }
 }
