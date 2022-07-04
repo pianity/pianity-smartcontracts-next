@@ -1,6 +1,6 @@
 use async_recursion::async_recursion;
 
-use crate::action::{Action, ActionResult, QueryResponseMsg};
+use crate::action::{Action, ActionResult};
 use crate::actions::approval::{is_approved_for_all, set_approval_for_all};
 use crate::actions::balance::balance_of;
 use crate::actions::batch::batch;
@@ -15,7 +15,7 @@ use crate::error::ContractError;
 use crate::state::State;
 
 #[async_recursion]
-pub async fn handle(state: &mut State, action: Action) -> ActionResult {
+pub async fn handle(state: State, action: Action) -> ActionResult {
     // for vrf-compatible interactions
     /*log(&("Vrf::value()".to_owned() + &Vrf::value()));
     log(&("Vrf::randomInt()".to_owned() + &Vrf::randomInt(7).to_string()));*/
@@ -47,9 +47,7 @@ pub async fn handle(state: &mut State, action: Action) -> ActionResult {
             set_approval_for_all(state, operator, approved)
         }
 
-        Action::IsApprovedForAll { operator, owner } => {
-            is_approved_for_all(&state, operator, owner)
-        }
+        Action::IsApprovedForAll { operator, owner } => is_approved_for_all(state, operator, owner),
 
         Action::Batch(args) => batch(state, args).await,
     }

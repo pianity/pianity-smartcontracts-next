@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::contract_utils::handler_result::HandlerResult;
+use crate::contract_utils::handler_result::HandlerResult as HandlerResultGeneric;
 use crate::error::ContractError;
 use crate::state::State;
 
@@ -66,22 +66,22 @@ pub enum Action {
     Batch(BatchArgs),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase", untagged)]
-pub enum QueryResponseMsg {
-    #[serde(rename_all = "camelCase")]
+pub enum ReadResponse {
     Balance {
         balance: u64,
-        ticker: String,
         target: String,
     },
 
-    #[serde(rename_all = "camelCase")]
     ApprovedForAll {
         approved: bool,
         owner: String,
         operator: String,
     },
+
+    Batch(Vec<ReadResponse>),
 }
 
-pub type ActionResult = Result<HandlerResult<QueryResponseMsg>, ContractError>;
+pub type HandlerResult = HandlerResultGeneric<State, ReadResponse>;
+pub type ActionResult = Result<HandlerResult, ContractError>;

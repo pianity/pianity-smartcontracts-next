@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
-use crate::action::{Action, QueryResponseMsg};
+use crate::action::{Action, ReadResponse};
 use crate::contract;
 use crate::contract_utils::handler_result::HandlerResult;
 use crate::error::ContractError;
@@ -59,14 +59,16 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
         );
     }
 
-    let mut state = STATE.with(|service| service.borrow().clone());
-    let result = contract::handle(&mut state, action.unwrap()).await;
+    let state = STATE.with(|service| service.borrow().clone());
+    let result = contract::handle(state, action.unwrap()).await;
 
-    if let Ok(HandlerResult::Write) = result {
-        STATE.with(|service| service.replace(state));
-        None
-    } else {
-        Some(JsValue::from_serde(&result).unwrap())
+    match result {
+        Ok(HandlerResult::Write(state)) => {
+            STATE.with(|service| service.replace(state));
+            None
+        }
+        Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
+        Err(error) => Some(JsValue::from_serde(&error).unwrap()),
     }
 }
 

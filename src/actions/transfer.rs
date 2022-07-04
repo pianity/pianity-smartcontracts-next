@@ -7,7 +7,7 @@ use crate::state::State;
 use super::approval::is_approved_for_all_impl;
 
 pub fn transfer(
-    state: &mut State,
+    mut state: State,
     from: Option<String>,
     to: String,
     token_id: String,
@@ -54,5 +54,5 @@ pub fn transfer(
     let target_balance = *token.balances.get(&to).unwrap_or(&0);
     token.balances.insert(to, target_balance + qty);
 
-    Ok(HandlerResult::Write)
+    Ok(HandlerResult::Write(state))
 }

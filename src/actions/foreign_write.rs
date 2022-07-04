@@ -39,5 +39,5 @@ pub async fn foreign_write(
     // log(("Write done! ".to_owned() + &result.state.ticker).as_str());
     // log(("Result type ".to_owned() + &result.result_type).as_str());
 
-    Ok(HandlerResult::Write)
+    Ok(HandlerResult::Write(state))
 }

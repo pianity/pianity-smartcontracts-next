@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum ContractError {
     RuntimeError(String),
     TransferAmountMustBeHigherThanZero,
@@ -10,7 +10,11 @@ pub enum ContractError {
     CallerBalanceNotEnough(u64),
     OnlyOwnerCanEvolve,
     EvolveNotAllowed,
+
     ForbiddenNestedBatch,
+    CannotMixeReadAndWrite,
+    EmptyBatch,
+
     UnauthorizedConfiguration,
     UnauthorizedAddress(String),
     UnauthorizedTransfer(String),

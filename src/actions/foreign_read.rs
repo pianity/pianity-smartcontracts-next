@@ -19,6 +19,6 @@ pub async fn foreign_read(mut state: State, contract_tx_id: String) -> ActionRes
         //     }
         // }
 
-        Ok(HandlerResult::Write)
+        Ok(HandlerResult::Write(state))
     }
 }
