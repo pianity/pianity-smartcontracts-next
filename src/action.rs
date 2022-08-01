@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
+use crate::actions::transfer::Transfer;
 use crate::contract_utils::handler_result::HandlerResult as HandlerResultGeneric;
 use crate::error::ContractError;
-use crate::state::State;
+use crate::state::{Balance, BalancePrecision, State};
 
 // function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external;
 //
@@ -16,30 +18,41 @@ use crate::state::State;
 //
 // function isApprovedForAll(address _owner, address _operator) external view returns (bool);
 
-#[derive(Deserialize)]
+pub trait Actionable {
+    fn action(self, caller: String, state: State) -> ActionResult;
+}
+
+#[derive(Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ConfigureArgs {
     pub super_owner: Option<String>,
     pub owners: Option<Vec<String>>,
     pub authorized_addresses: Option<Vec<String>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct BatchArgs {
     pub actions: Vec<Action>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MintArgs {
+    pub ticker: Option<String>,
+    pub prefix: Option<String>,
+    pub qty: Balance,
+}
+
+#[derive(Deserialize, TS)]
 #[serde(rename_all = "camelCase", tag = "function")]
+#[ts(export)]
 pub enum Action {
     #[serde(rename_all = "camelCase")]
-    Transfer {
-        from: Option<String>,
-        to: String,
-        token_id: String,
-        qty: u64,
-    },
+    Transfer(Transfer),
 
     #[serde(rename_all = "camelCase")]
     BalanceOf {
@@ -63,6 +76,8 @@ pub enum Action {
         value: String,
     },
 
+    Mint(MintArgs),
+
     Batch(BatchArgs),
 }
 
@@ -70,7 +85,7 @@ pub enum Action {
 #[serde(rename_all = "camelCase", untagged)]
 pub enum ReadResponse {
     Balance {
-        balance: u64,
+        balance: BalancePrecision,
         target: String,
     },
 

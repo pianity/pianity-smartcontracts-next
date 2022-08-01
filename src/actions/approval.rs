@@ -4,7 +4,7 @@ use crate::action::ActionResult;
 use crate::action::ReadResponse::ApprovedForAll;
 use crate::contract_utils::handler_result::HandlerResult;
 use crate::contract_utils::js_imports::Transaction;
-use crate::state::State;
+use crate::state::{Approvals, State};
 
 pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> bool {
     match state.approvals.get(owner) {
@@ -13,7 +13,12 @@ pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> b
     }
 }
 
-pub fn is_approved_for_all(state: State, operator: String, owner: String) -> ActionResult {
+pub fn is_approved_for_all(
+    state: State,
+    caller: String,
+    operator: String,
+    owner: String,
+) -> ActionResult {
     let approved = is_approved_for_all_impl(&state, &operator, &owner);
 
     Ok(HandlerResult::Read(
@@ -26,14 +31,19 @@ pub fn is_approved_for_all(state: State, operator: String, owner: String) -> Act
     ))
 }
 
-pub fn set_approval_for_all(mut state: State, operator: String, approved: bool) -> ActionResult {
-    if let Some(approved_ops) = state.approvals.get_mut(&Transaction::owner()) {
+pub fn set_approval_for_all(
+    mut state: State,
+    caller: String,
+    operator: String,
+    approved: bool,
+) -> ActionResult {
+    if let Some(approved_ops) = state.approvals.get_mut(&caller) {
         approved_ops.insert(operator, approved);
     } else {
         let mut approved_ops = HashMap::new();
         approved_ops.insert(operator, approved);
 
-        state.approvals.insert(Transaction::owner(), approved_ops);
+        state.approvals.insert(caller, approved_ops);
     };
 
     Ok(HandlerResult::Write(state))

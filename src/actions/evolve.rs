@@ -4,10 +4,10 @@ use crate::contract_utils::js_imports::Transaction;
 use crate::error::ContractError::{EvolveNotAllowed, OnlyOwnerCanEvolve};
 use crate::state::State;
 
-pub fn evolve(mut state: State, value: String) -> ActionResult {
+pub fn evolve(mut state: State, caller: String, value: String) -> ActionResult {
     match state.can_evolve {
         Some(can_evolve) => {
-            if can_evolve && state.settings.super_owner == Transaction::owner() {
+            if can_evolve && state.settings.super_operator == Transaction::owner() {
                 state.evolve = Option::from(value);
                 Ok(HandlerResult::Write(state))
             } else {

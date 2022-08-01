@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+use crate::state::BalancePrecision;
+
 #[derive(Serialize, Debug)]
 pub enum ContractError {
     RuntimeError(String),
@@ -7,7 +9,7 @@ pub enum ContractError {
     TransferFromAndToCannotBeEqual,
     TokenNotFound(String),
     IDontLikeThisContract,
-    CallerBalanceNotEnough(u64),
+    CallerBalanceNotEnough(BalancePrecision),
     OnlyOwnerCanEvolve,
     EvolveNotAllowed,
 
@@ -18,4 +20,5 @@ pub enum ContractError {
     UnauthorizedConfiguration,
     UnauthorizedAddress(String),
     UnauthorizedTransfer(String),
+    TokenAlreadyExists,
 }

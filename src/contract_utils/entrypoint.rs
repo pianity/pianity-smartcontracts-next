@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::action::{Action, ReadResponse};
 use crate::contract;
-use crate::contract_utils::handler_result::HandlerResult;
+use crate::contract_utils::{handler_result::HandlerResult, js_imports::log};
 use crate::error::ContractError;
 use crate::state::State;
 

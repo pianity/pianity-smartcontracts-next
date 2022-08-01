@@ -49,12 +49,12 @@ pub async fn batch(mut state: State, args: BatchArgs) -> ActionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::Token;
+    use crate::state::{BalancePrecision, Balances, Token};
     use std::collections::HashMap;
 
     #[test]
     fn batch_test() {
-        fn to_balance(res: &ReadResponse) -> u64 {
+        fn to_balance(res: &ReadResponse) -> BalancePrecision {
             if let ReadResponse::Balance { balance, .. } = res {
                 return *balance;
             } else {

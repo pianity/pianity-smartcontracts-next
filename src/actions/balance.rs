@@ -3,7 +3,7 @@ use crate::contract_utils::handler_result::HandlerResult::Read;
 use crate::error::ContractError;
 use crate::state::State;
 
-pub fn balance_of(state: State, token_id: String, target: String) -> ActionResult {
+pub fn balance_of(state: State, caller: String, token_id: String, target: String) -> ActionResult {
     let balance = {
         let token = match state.tokens.get(&token_id) {
             Some(token) => token,
@@ -11,7 +11,7 @@ pub fn balance_of(state: State, token_id: String, target: String) -> ActionResul
         };
 
         match token.balances.get(&target) {
-            Some(balance) => balance.clone(),
+            Some(balance) => balance.clone().value,
             None => 0,
         }
     };
