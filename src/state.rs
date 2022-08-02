@@ -1,6 +1,6 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use ts_rs::TS;
 
 mod string {
     use std::fmt::Display;
@@ -30,11 +30,12 @@ mod string {
 
 pub type BalancePrecision = u32;
 
-#[derive(Serialize, Deserialize, Copy, Clone, Default, Debug, TS)]
+// #[derive(JsonSchema, Copy, Clone, Default, Debug, TS)]
+#[derive(JsonSchema, Serialize, Deserialize, Copy, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase", transparent)]
-#[ts(export)]
 pub struct Balance {
     #[serde(with = "string")]
+    #[schemars(with = "String")]
     pub value: BalancePrecision,
 }
 
@@ -47,17 +48,15 @@ impl Balance {
 pub type Balances = HashMap<String, Balance>;
 pub type Approvals = HashMap<String, bool>;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, TS)]
+#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Token {
     pub ticker: String,
     pub balances: Balances,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, TS)]
+#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Settings {
     pub super_operator: String,
     pub operators: Vec<String>,
@@ -68,9 +67,8 @@ pub struct Settings {
     pub authorized_addresses: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, TS)]
+#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct State {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,

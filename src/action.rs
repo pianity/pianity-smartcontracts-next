@@ -1,5 +1,5 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 use crate::actions::transfer::Transfer;
 use crate::contract_utils::handler_result::HandlerResult as HandlerResultGeneric;
@@ -22,34 +22,30 @@ pub trait Actionable {
     fn action(self, caller: String, state: State) -> ActionResult;
 }
 
-#[derive(Deserialize, TS)]
+#[derive(JsonSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct ConfigureArgs {
     pub super_owner: Option<String>,
     pub owners: Option<Vec<String>>,
     pub authorized_addresses: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, TS)]
+#[derive(JsonSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct BatchArgs {
     pub actions: Vec<Action>,
 }
 
-#[derive(Deserialize, TS)]
+#[derive(JsonSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct MintArgs {
     pub ticker: Option<String>,
     pub prefix: Option<String>,
     pub qty: Balance,
 }
 
-#[derive(Deserialize, TS)]
+#[derive(JsonSchema, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
-#[ts(export)]
 pub enum Action {
     #[serde(rename_all = "camelCase")]
     Transfer(Transfer),

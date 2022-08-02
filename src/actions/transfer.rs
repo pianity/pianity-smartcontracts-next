@@ -1,5 +1,5 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 use crate::action::{ActionResult, Actionable};
 use crate::contract_utils::handler_result::HandlerResult;
@@ -10,9 +10,8 @@ use crate::utils::is_op;
 
 use super::approval::is_approved_for_all_impl;
 
-#[derive(Serialize, Deserialize, TS)]
+#[derive(JsonSchema, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Transfer {
     pub from: Option<String>,
     pub to: String,
