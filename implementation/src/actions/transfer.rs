@@ -5,8 +5,7 @@ use warp_erc1155::state::{Balance, State};
 use crate::contract_utils::js_imports::{SmartWeave, Transaction};
 use crate::utils::is_op;
 
-use super::approval::is_approved_for_all_impl;
-use super::Actionable;
+use super::{approval::is_approved_for_all_impl, Actionable};
 
 impl Actionable for Transfer {
     fn action(self, caller: String, mut state: State) -> ActionResult {

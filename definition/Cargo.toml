@@ -1,7 +1,7 @@
 [package]
 name = "warp-erc1155"
 version = "0.1.0"
-authors = ["Sample smartweave contract"]
+authors = ["Eyal Chojnowski"]
 edition = "2021"
 
 [dependencies]

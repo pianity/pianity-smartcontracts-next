@@ -1,14 +1,13 @@
 {
-  "name": "warp-contracts-rust-tmpl",
+  "name": "warp-erc1155",
   "version": "0.0.1",
-  "description": "Warp wasm rust contract template",
+  "description": "Rust implementation of the ERC1155 contract standard",
   "main": "index.js",
-  "author": "Redstone Team <dev@redstone.finance>",
+  "author": "Eyal Chojnowski <eyal@pianity.com>",
   "license": "MIT",
-  "private": false,
   "scripts": {
     "build-wasm": "wasm-pack build --target nodejs --release --out-name rust-contract implementation",
-    "build-types": "RUN_GENERATE=1 cargo test run_generate --  --nocapture",
+    "build-types": "RUN_GENERATE=1 cargo test run_generate -- --nocapture",
     "deploy:local": "yarn build && node deploy/local/deploy-local.js",
     "deploy:testnet": "yarn build && node deploy/testnet/deploy-test.js",
     "deploy:mainnet": "yarn build && node deploy/mainnet/deploy-mainnet.js",

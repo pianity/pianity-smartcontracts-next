@@ -2,10 +2,14 @@ use std::collections::HashMap;
 
 use warp_erc1155::action::ActionResult;
 use warp_erc1155::action::HandlerResult;
+use warp_erc1155::action::IsApprovedForAll;
 use warp_erc1155::action::ReadResponse;
+use warp_erc1155::action::SetApprovalForAll;
 use warp_erc1155::state::State;
 
 use crate::contract_utils::js_imports::Transaction;
+
+use super::Actionable;
 
 pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> bool {
     match state.approvals.get(owner) {
@@ -14,38 +18,32 @@ pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> b
     }
 }
 
-pub fn is_approved_for_all(
-    state: State,
-    caller: String,
-    operator: String,
-    owner: String,
-) -> ActionResult {
-    let approved = is_approved_for_all_impl(&state, &operator, &owner);
+impl Actionable for IsApprovedForAll {
+    fn action(self, caller: String, mut state: State) -> ActionResult {
+        let approved = is_approved_for_all_impl(&state, &self.operator, &self.owner);
 
-    Ok(HandlerResult::Read(
-        state,
-        ReadResponse::ApprovedForAll {
-            approved,
-            owner,
-            operator,
-        },
-    ))
+        Ok(HandlerResult::Read(
+            state,
+            ReadResponse::ApprovedForAll {
+                approved,
+                owner: self.owner,
+                operator: self.operator,
+            },
+        ))
+    }
 }
 
-pub fn set_approval_for_all(
-    mut state: State,
-    caller: String,
-    operator: String,
-    approved: bool,
-) -> ActionResult {
-    if let Some(approved_ops) = state.approvals.get_mut(&caller) {
-        approved_ops.insert(operator, approved);
-    } else {
-        let mut approved_ops = HashMap::new();
-        approved_ops.insert(operator, approved);
+impl Actionable for SetApprovalForAll {
+    fn action(self, caller: String, mut state: State) -> ActionResult {
+        if let Some(approved_ops) = state.approvals.get_mut(&caller) {
+            approved_ops.insert(self.operator, self.approved);
+        } else {
+            let mut approved_ops = HashMap::new();
+            approved_ops.insert(self.operator, self.approved);
 
-        state.approvals.insert(caller, approved_ops);
-    };
+            state.approvals.insert(caller, approved_ops);
+        };
 
-    Ok(HandlerResult::Write(state))
+        Ok(HandlerResult::Write(state))
+    }
 }
