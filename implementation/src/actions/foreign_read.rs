@@ -1,9 +1,9 @@
-use crate::action::ActionResult;
+use warp_erc1155::action::{ActionResult, HandlerResult};
+use warp_erc1155::error::ContractError;
+use warp_erc1155::state::State;
+
 use crate::contract_utils::foreign_call::read_foreign_contract_state;
-use crate::contract_utils::handler_result::HandlerResult;
 use crate::contract_utils::js_imports::log;
-use crate::error::ContractError;
-use crate::state::State;
 
 pub async fn foreign_read(mut state: State, contract_tx_id: String) -> ActionResult {
     if contract_tx_id == "bad_contract" {

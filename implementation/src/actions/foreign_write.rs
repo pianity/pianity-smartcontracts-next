@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
+use warp_erc1155::action::{ActionResult, HandlerResult};
+use warp_erc1155::state::State;
 
-use crate::action::ActionResult;
 use crate::contract_utils::foreign_call::write_foreign_contract;
-use crate::contract_utils::handler_result::HandlerResult;
 use crate::contract_utils::js_imports::log;
-use crate::state::State;
 
 #[derive(Serialize)]
 struct Input {

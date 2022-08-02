@@ -1,8 +1,8 @@
-use crate::action::ActionResult;
-use crate::contract_utils::handler_result::HandlerResult;
+use warp_erc1155::action::{ActionResult, HandlerResult};
+use warp_erc1155::error::ContractError;
+use warp_erc1155::state::State;
+
 use crate::contract_utils::js_imports::Transaction;
-use crate::error::ContractError::{EvolveNotAllowed, OnlyOwnerCanEvolve};
-use crate::state::State;
 
 pub fn evolve(mut state: State, caller: String, value: String) -> ActionResult {
     match state.can_evolve {
@@ -11,9 +11,9 @@ pub fn evolve(mut state: State, caller: String, value: String) -> ActionResult {
                 state.evolve = Option::from(value);
                 Ok(HandlerResult::Write(state))
             } else {
-                Err(OnlyOwnerCanEvolve)
+                Err(ContractError::OnlyOwnerCanEvolve)
             }
         }
-        None => Err(EvolveNotAllowed),
+        None => Err(ContractError::EvolveNotAllowed),
     }
 }

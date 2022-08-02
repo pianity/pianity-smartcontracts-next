@@ -1,4 +1,4 @@
-use crate::state::State;
+use warp_erc1155::state::State;
 
 pub fn is_op(state: &State, address: &str) -> bool {
     address == state.settings.super_operator

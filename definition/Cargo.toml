@@ -1,0 +1,11 @@
+[package]
+name = "warp-erc1155"
+version = "0.1.0"
+authors = ["Sample smartweave contract"]
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio-test = "0.4.2"
+schemars = "0.8.10"

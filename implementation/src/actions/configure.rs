@@ -1,8 +1,8 @@
-use crate::action::{ActionResult, ConfigureArgs};
-use crate::contract_utils::handler_result::HandlerResult;
+use warp_erc1155::action::{ActionResult, ConfigureArgs, HandlerResult};
+use warp_erc1155::error::ContractError;
+use warp_erc1155::state::State;
+
 use crate::contract_utils::js_imports::Transaction;
-use crate::error::ContractError;
-use crate::state::State;
 
 pub fn configure(mut state: State, caller: String, args: ConfigureArgs) -> ActionResult {
     if args.super_owner.is_some() && caller != state.settings.super_operator

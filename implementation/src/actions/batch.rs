@@ -1,7 +1,10 @@
-use crate::action::{Action, ActionResult, BatchArgs, HandlerResult, ReadResponse};
+use warp_erc1155::{
+    action::{Action, ActionResult, BatchArgs, HandlerResult, ReadResponse},
+    error::ContractError,
+    state::State,
+};
+
 use crate::contract::handle;
-use crate::error::ContractError;
-use crate::state::State;
 
 pub async fn batch(mut state: State, args: BatchArgs) -> ActionResult {
     let mut results: Vec<ReadResponse> = Vec::new();
@@ -49,8 +52,8 @@ pub async fn batch(mut state: State, args: BatchArgs) -> ActionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{BalancePrecision, Balances, Token};
     use std::collections::HashMap;
+    use warp_erc1155::state::{BalancePrecision, Balances, Token};
 
     #[test]
     fn batch_test() {

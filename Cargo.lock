@@ -248,7 +248,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
-name = "warp-rust-erc1155"
+name = "warp-erc1155"
+version = "0.1.0"
+dependencies = [
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio-test",
+]
+
+[[package]]
+name = "warp-erc1155-implementation"
 version = "0.1.0"
 dependencies = [
  "async-recursion",
@@ -257,6 +267,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio-test",
+ "warp-erc1155",
  "wasm-bindgen",
  "wasm-bindgen-futures",
 ]

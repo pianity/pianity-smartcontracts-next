@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::action::{ActionResult, MintArgs};
-use crate::contract_utils::handler_result::HandlerResult;
+use warp_erc1155::action::{ActionResult, HandlerResult, MintArgs};
+use warp_erc1155::error::ContractError;
+use warp_erc1155::state::{Balance, State, Token};
+
 use crate::contract_utils::js_imports::Transaction;
-use crate::error::ContractError;
-use crate::state::{Balance, Balances, State, Token};
 use crate::utils::is_op;
 
 fn get_token_id(prefix: Option<String>, ticker: Option<String>) -> String {
@@ -53,7 +53,7 @@ pub fn mint(mut state: State, caller: String, args: MintArgs) -> ActionResult {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{
+    use warp_erc1155::{
         action::{HandlerResult, MintArgs},
         state::{Balance, Settings, State, Token},
     };

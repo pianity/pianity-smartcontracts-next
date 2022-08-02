@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use crate::action::ActionResult;
-use crate::action::ReadResponse::ApprovedForAll;
-use crate::contract_utils::handler_result::HandlerResult;
+use warp_erc1155::action::ActionResult;
+use warp_erc1155::action::HandlerResult;
+use warp_erc1155::action::ReadResponse;
+use warp_erc1155::state::State;
+
 use crate::contract_utils::js_imports::Transaction;
-use crate::state::{Approvals, State};
 
 pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> bool {
     match state.approvals.get(owner) {
@@ -23,7 +24,7 @@ pub fn is_approved_for_all(
 
     Ok(HandlerResult::Read(
         state,
-        ApprovedForAll {
+        ReadResponse::ApprovedForAll {
             approved,
             owner,
             operator,

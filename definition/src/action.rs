@@ -1,8 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::actions::transfer::Transfer;
-use crate::contract_utils::handler_result::HandlerResult as HandlerResultGeneric;
 use crate::error::ContractError;
 use crate::state::{Balance, BalancePrecision, State};
 
@@ -17,10 +15,6 @@ use crate::state::{Balance, BalancePrecision, State};
 // function setApprovalForAll(address _operator, bool _approved) external;
 //
 // function isApprovedForAll(address _owner, address _operator) external view returns (bool);
-
-pub trait Actionable {
-    fn action(self, caller: String, state: State) -> ActionResult;
-}
 
 #[derive(JsonSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -42,6 +36,15 @@ pub struct MintArgs {
     pub ticker: Option<String>,
     pub prefix: Option<String>,
     pub qty: Balance,
+}
+
+#[derive(JsonSchema, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Transfer {
+    pub from: Option<String>,
+    pub to: String,
+    pub token_id: String,
+    pub qty: BalancePrecision,
 }
 
 #[derive(JsonSchema, Deserialize)]
@@ -92,6 +95,13 @@ pub enum ReadResponse {
     },
 
     Batch(Vec<ReadResponse>),
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum HandlerResultGeneric<State, ReadResponse> {
+    Write(State),
+    Read(State, ReadResponse),
 }
 
 pub type HandlerResult = HandlerResultGeneric<State, ReadResponse>;

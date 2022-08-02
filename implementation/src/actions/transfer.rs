@@ -1,23 +1,12 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use warp_erc1155::action::{ActionResult, HandlerResult, Transfer};
+use warp_erc1155::error::ContractError;
+use warp_erc1155::state::{Balance, State};
 
-use crate::action::{ActionResult, Actionable};
-use crate::contract_utils::handler_result::HandlerResult;
 use crate::contract_utils::js_imports::{SmartWeave, Transaction};
-use crate::error::ContractError;
-use crate::state::{Balance, BalancePrecision, State};
 use crate::utils::is_op;
 
 use super::approval::is_approved_for_all_impl;
-
-#[derive(JsonSchema, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Transfer {
-    pub from: Option<String>,
-    pub to: String,
-    pub token_id: String,
-    pub qty: BalancePrecision,
-}
+use super::Actionable;
 
 impl Actionable for Transfer {
     fn action(self, caller: String, mut state: State) -> ActionResult {

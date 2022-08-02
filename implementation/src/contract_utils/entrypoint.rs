@@ -2,18 +2,15 @@
 /////////////// DO NOT MODIFY THIS FILE /////////////
 /////////////////////////////////////////////////////
 
-use once_cell::sync::OnceCell;
-// use parking_lot::Mutex;
-use std::sync::Mutex;
+use std::cell::RefCell;
 
 use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
-use crate::action::{Action, QueryResponseMsg};
 use crate::contract;
-use crate::contract_utils::handler_result::HandlerResult;
-use crate::error::ContractError;
-use crate::state::State;
+use warp_erc1155::action::{Action, HandlerResult, ReadResponse};
+use warp_erc1155::error::ContractError;
+use warp_erc1155::state::State;
 
 /*
 Note: in order do optimize communication between host and the WASM module,
@@ -43,36 +40,34 @@ In the future this might also allow to enhance the inner-contracts communication
 - it would allow to read other contract's state "directly" from WASM module memory.
 */
 
-static STATE: OnceCell<Mutex<State>> = OnceCell::new();
-
-fn with_state<R>(data: Mutex<State>, f: impl FnOnce(&mut State) -> R) -> R {
-    let state = &mut data.lock().expect("Could not lock mutex");
-    f(state)
+// inspired by https://github.com/dfinity/examples/blob/master/rust/basic_dao/src/basic_dao/src/lib.rs#L13
+thread_local! {
+    static STATE: RefCell<State> = RefCell::default();
 }
 
 #[wasm_bindgen()]
 pub async fn handle(interaction: JsValue) -> Option<JsValue> {
-    let result: Result<HandlerResult<QueryResponseMsg>, ContractError>;
     let action: Result<Action, Error> = interaction.into_serde();
 
     if action.is_err() {
-        // cannot pass any data from action.error here - ends up with
-        // "FnOnce called more than once" error from wasm-bindgen for
-        // "foreign_call" testcase.
-        result = Err(ContractError::RuntimeError(
-            "Error while parsing input".to_string(),
-        ));
-    } else {
-        // let state = &mut *STATE.get().unwrap().lock().unwrap();
-        let state = STATE.get().unwrap().into_inner().unwrap();
-
-        result = contract::handle(state, action.unwrap()).await;
+        return Some(
+            JsValue::from_serde(&ContractError::RuntimeError(
+                "Error while parsing input".to_string(),
+            ))
+            .unwrap(),
+        );
     }
 
-    if let Ok(HandlerResult::NewState) = result {
-        None
-    } else {
-        Some(JsValue::from_serde(&result).unwrap())
+    let state = STATE.with(|service| service.borrow().clone());
+    let result = contract::handle(state, action.unwrap()).await;
+
+    match result {
+        Ok(HandlerResult::Write(state)) => {
+            STATE.with(|service| service.replace(state));
+            None
+        }
+        Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
+        Err(error) => Some(JsValue::from_serde(&error).unwrap()),
     }
 }
 
@@ -80,7 +75,7 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
 pub fn init_state(state: &JsValue) {
     let state_parsed: State = state.into_serde().unwrap();
 
-    STATE.set(Mutex::new(state_parsed)).unwrap();
+    STATE.with(|service| service.replace(state_parsed));
 }
 
 #[wasm_bindgen(js_name = currentState)]
@@ -89,8 +84,8 @@ pub fn current_state() -> JsValue {
     // TODO: perf - according to docs:
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
-    let current_state = STATE.get().unwrap();
-    JsValue::from_serde(current_state).unwrap()
+    let current_state = STATE.with(|service| service.borrow().clone());
+    JsValue::from_serde(&current_state).unwrap()
 }
 
 #[wasm_bindgen()]
