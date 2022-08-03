@@ -11,13 +11,13 @@ pub struct BalanceOf {
     pub target: String,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transfer {
     pub from: Option<String>,
     pub to: String,
     pub token_id: String,
-    pub qty: BalancePrecision,
+    pub qty: Balance,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize)]

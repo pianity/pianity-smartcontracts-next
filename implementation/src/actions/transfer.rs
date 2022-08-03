@@ -9,7 +9,7 @@ use super::{approval::is_approved_for_all_impl, Actionable};
 
 impl Actionable for Transfer {
     fn action(self, caller: String, mut state: State) -> ActionResult {
-        if self.qty == 0 {
+        if self.qty.value == 0 {
             return Err(ContractError::TransferAmountMustBeHigherThanZero);
         }
 
@@ -42,20 +42,20 @@ impl Actionable for Transfer {
         // Checking if caller has enough funds
         let from_balance = *token.balances.get(&from).unwrap_or(&Balance::new(0));
 
-        if from_balance.value < self.qty {
+        if from_balance.value < self.qty.value {
             return Err(ContractError::CallerBalanceNotEnough(from_balance.value));
         }
 
         // Update caller balance
         token
             .balances
-            .insert(from, Balance::new(from_balance.value - self.qty));
+            .insert(from, Balance::new(from_balance.value - self.qty.value));
 
         // Update target balance
         let target_balance = *token.balances.get(&self.to).unwrap_or(&Balance::new(0));
         token
             .balances
-            .insert(self.to, Balance::new(target_balance.value + self.qty));
+            .insert(self.to, Balance::new(target_balance.value + self.qty.value));
 
         Ok(HandlerResult::Write(state))
     }
