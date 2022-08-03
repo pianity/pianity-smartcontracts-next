@@ -50,12 +50,11 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
     let action: Result<Action, Error> = interaction.into_serde();
 
     if action.is_err() {
-        return Some(
-            JsValue::from_serde(&ContractError::RuntimeError(
-                "Error while parsing input".to_string(),
-            ))
-            .unwrap(),
-        );
+        let error = Err::<HandlerResult, _>(ContractError::RuntimeError(
+            "Error while parsing input".to_string(),
+        ));
+
+        return Some(JsValue::from_serde(&error).unwrap());
     }
 
     let state = STATE.with(|service| service.borrow().clone());
@@ -67,7 +66,7 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
             None
         }
         Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
-        Err(error) => Some(JsValue::from_serde(&error).unwrap()),
+        error @ Err(_) => Some(JsValue::from_serde(&error).unwrap()),
     }
 }
 
