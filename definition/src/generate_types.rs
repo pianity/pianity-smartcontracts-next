@@ -25,9 +25,9 @@ mod tests {
         Command::new("yarn")
             .arg("json2ts")
             .arg("--input")
-            .arg(&schema_file)
+            .arg(Path::new("./definition").join(&schema_file))
             .arg("--output")
-            .arg(&ts_file)
+            .arg(Path::new("./definition").join(&ts_file))
             .output()?;
 
         Ok(())
@@ -45,8 +45,6 @@ mod tests {
             return Ok(());
         }
 
-        generate::<Token>("Token")?;
-        generate::<Settings>("Settings")?;
         generate::<State>("State")?;
         generate::<Action>("Action")?;
 
