@@ -30,7 +30,6 @@ mod string {
 
 pub type BalancePrecision = u32;
 
-// #[derive(JsonSchema, Copy, Clone, Default, Debug, TS)]
 #[derive(JsonSchema, Serialize, Deserialize, Copy, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Balance {

@@ -8,7 +8,7 @@ use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::contract;
-use warp_erc1155::action::{Action, HandlerResult, ReadResponse};
+use warp_erc1155::action::{Action, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::State;
 

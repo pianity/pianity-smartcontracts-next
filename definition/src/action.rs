@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::ContractError;
 use crate::state::{Balance, BalancePrecision, State};
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BalanceOf {
     pub token_id: String,
@@ -20,7 +20,7 @@ pub struct Transfer {
     pub qty: Balance,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
     pub super_owner: Option<String>,
@@ -28,7 +28,7 @@ pub struct Configure {
     pub authorized_addresses: Option<Vec<String>>,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Mint {
     pub ticker: Option<String>,
@@ -36,39 +36,37 @@ pub struct Mint {
     pub qty: Balance,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SetApprovalForAll {
     pub operator: String,
     pub approved: bool,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IsApprovedForAll {
     pub owner: String,
     pub operator: String,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Batch {
     pub actions: Vec<Action>,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Evolve {
     pub value: String,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
-    #[serde(rename_all = "camelCase")]
     BalanceOf(BalanceOf),
 
-    #[serde(rename_all = "camelCase")]
     Transfer(Transfer),
 
     Configure(Configure),

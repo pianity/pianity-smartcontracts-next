@@ -6,7 +6,7 @@
   "author": "Eyal Chojnowski <eyal@pianity.com>",
   "license": "MIT",
   "scripts": {
-    "build-wasm": "wasm-pack build --target nodejs --release --out-name rust-contract implementation",
+    "build": "wasm-pack build --target nodejs --release --out-name rust-contract implementation",
     "build-types": "RUN_GENERATE=1 cargo test run_generate -- --nocapture",
     "deploy:local": "yarn build && node deploy/local/deploy-local.js",
     "deploy:testnet": "yarn build && node deploy/testnet/deploy-test.js",

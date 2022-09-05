@@ -7,7 +7,7 @@ mod tests {
     use schemars::JsonSchema;
 
     use crate::action::Action;
-    use crate::state::{Settings, State, Token};
+    use crate::state::State;
 
     const SCHEMAS_DIR: &str = "./bindings/json";
     const TS_DIR: &str = "./bindings/ts";
