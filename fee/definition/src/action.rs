@@ -27,7 +27,6 @@ pub struct CreateFee {
 pub struct Configure {
     pub super_operator: Option<String>,
     pub operators: Option<Vec<String>>,
-    pub authorized_addresses: Option<Vec<String>>,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
