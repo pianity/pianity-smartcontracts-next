@@ -7,15 +7,11 @@
         "tests"
     ],
     "scripts": {
-        "build": "yarn build-contracts && yarn build-contract-types",
-        "build-contract": "yarn workspaces foreach --exclude root -vitp run build",
-        "build-contract-types": "yarn workspaces foreach --exclude root -vitp run build-types",
-        "test": "yarn workspace tests run start",
-        "typecheck": "yarn workspaces foreach --exclude root -vip run typecheck",
-        "lint": "yarn workspaces foreach --exclude root -vip run lint",
-        "lint-errors": "yarn workspaces foreach --exclude root -vip run lint --quiet",
-        "lint-fix": "yarn workspaces foreach --exclude root -vip run lint:fix",
-        "postinstall": "husky install&& cp ./node_modules/koumu/build/commit-msg .husky/commit-msg&& chmod +x .husky/commit-msg",
+        "build": "yarn build-contracts && yarn build-contracts-types",
+        "build-contracts": "yarn workspaces foreach --exclude root -vitp run build",
+        "build-contracts-types": "yarn workspaces foreach --exclude root -vitp run build-types",
+        "test": "yarn workspace tests run test",
+        "postinstall": "husky install && cp ./node_modules/koumu/build/commit-msg .husky/commit-msg && chmod +x .husky/commit-msg",
         "prepack": "pinst --disable",
         "postpack": "pinst --enable"
     },

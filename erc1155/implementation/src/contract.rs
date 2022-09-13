@@ -37,7 +37,7 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
 
     match action {
         Action::Batch(_) => (),
-        Action::Transfer(_) => {
+        Action::Transfer(_) if !state.settings.transfer_proxies.is_empty() => {
             if original_caller != direct_caller
                 && !state.settings.transfer_proxies.contains(&direct_caller)
             {

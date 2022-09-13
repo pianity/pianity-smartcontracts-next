@@ -12,12 +12,11 @@
         "noEmit": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "baseUrl": "src/",
         "paths": {
-            "@/*": ["*"],
-            "#/*": ["../data/*"],
-            "erc1155/*": ["../../erc1155/definition/bindings/ts/*"],
-            "fee/*": ["../../fee/definition/bindings/ts/*"]
+            "@/*": ["./src/*"],
+            "erc1155/*": ["../erc1155/definition/bindings/ts/*"],
+            "fee/*": ["../fee/definition/bindings/ts/*"],
+            "tsconfig": ["./tsconfig.json"]
         }
     },
     "ts-node": {

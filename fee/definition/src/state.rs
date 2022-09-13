@@ -40,11 +40,11 @@ pub struct Settings {
     pub super_operator: String,
     pub operators: Vec<String>,
 
-    /// Addesses authorized to interact with the contract.
-    ///
-    /// If empty, all addresses are authorized.
-    pub authorized_addresses: Vec<String>,
-
+    // NOTE: Removed until a generalistic solution has been found.
+    // /// Addesses authorized to interact with the contract.
+    // ///
+    // /// If empty, all addresses are authorized.
+    // pub authorized_addresses: Vec<String>,
     /// Address of the attached ERC1155-compliant contract
     pub erc1155: String,
 
