@@ -44,7 +44,7 @@ impl Actionable for Mint {
         let token = Token {
             // TODO: What should `ticker` be? Is it necessary?
             ticker: token_id.clone(),
-            balances: HashMap::from([("".to_string(), Balance::new(self.qty.value))]),
+            balances: HashMap::from([(caller.to_string(), Balance::new(self.qty.value))]),
         };
 
         state.tokens.insert(token_id, token);

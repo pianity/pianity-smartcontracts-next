@@ -17,6 +17,8 @@ pub use evolve::*;
 pub use mint::*;
 pub use transfer::*;
 
+use crate::contract_utils::js_imports::log;
+
 pub trait Actionable {
     fn action(self, caller: String, state: State) -> ActionResult;
 }

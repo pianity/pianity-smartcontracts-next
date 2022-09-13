@@ -2,6 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::action::Action;
+
 mod string {
     use std::fmt::Display;
     use std::str::FromStr;
@@ -30,7 +32,7 @@ mod string {
 
 pub type BalancePrecision = u32;
 
-#[derive(JsonSchema, Serialize, Deserialize, Copy, Clone, Default, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Balance {
     #[serde(with = "string")]
@@ -60,10 +62,10 @@ pub struct Settings {
     pub super_operator: String,
     pub operators: Vec<String>,
 
-    /// Addesses authorized to interact with the contract.
+    /// Addesses authorized to execute transfers.
     ///
     /// If empty, all addresses are authorized.
-    pub authorized_addresses: Vec<String>,
+    pub transfer_proxies: Vec<String>,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]

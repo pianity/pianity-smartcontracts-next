@@ -4,14 +4,14 @@ use serde::{Deserialize, Serialize};
 use crate::error::ContractError;
 use crate::state::{Balance, BalancePrecision, State};
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct BalanceOf {
     pub token_id: String,
     pub target: String,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Transfer {
     pub from: Option<String>,
@@ -20,15 +20,15 @@ pub struct Transfer {
     pub qty: Balance,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
     pub super_owner: Option<String>,
     pub owners: Option<Vec<String>>,
-    pub authorized_addresses: Option<Vec<String>>,
+    pub transfer_proxies: Option<Vec<String>>,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Mint {
     pub ticker: Option<String>,
@@ -36,33 +36,33 @@ pub struct Mint {
     pub qty: Balance,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SetApprovalForAll {
     pub operator: String,
     pub approved: bool,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct IsApprovedForAll {
     pub owner: String,
     pub operator: String,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Batch {
     pub actions: Vec<Action>,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Evolve {
     pub value: String,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
     BalanceOf(BalanceOf),
@@ -82,7 +82,7 @@ pub enum Action {
     Batch(Batch),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase", untagged)]
 pub enum ReadResponse {
     Balance {

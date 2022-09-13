@@ -2,7 +2,6 @@ use warp_erc1155::action::{ActionResult, HandlerResult, Transfer};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::{Balance, State};
 
-use crate::contract_utils::js_imports::{SmartWeave, Transaction};
 use crate::utils::is_op;
 
 use super::{approval::is_approved_for_all_impl, Actionable};
@@ -23,10 +22,8 @@ impl Actionable for Transfer {
             caller.clone()
         };
 
-        if from != caller {
-            if !is_approved_for_all_impl(&state, &from, &caller) {
-                return Err(ContractError::UnauthorizedTransfer(from));
-            }
+        if from != caller && !is_approved_for_all_impl(&state, &caller, &from) {
+            return Err(ContractError::UnauthorizedTransfer(from));
         }
 
         if from == self.to {
@@ -46,10 +43,14 @@ impl Actionable for Transfer {
             return Err(ContractError::CallerBalanceNotEnough(from_balance.value));
         }
 
-        // Update caller balance
-        token
-            .balances
-            .insert(from, Balance::new(from_balance.value - self.qty.value));
+        let from_new_balance = Balance::new(from_balance.value - self.qty.value);
+
+        if from_new_balance.value == 0 {
+            token.balances.remove(&from);
+        } else {
+            // Update caller balance
+            token.balances.insert(from, from_new_balance);
+        }
 
         // Update target balance
         let target_balance = *token.balances.get(&self.to).unwrap_or(&Balance::new(0));

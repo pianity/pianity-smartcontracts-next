@@ -12,6 +12,8 @@ use warp_erc1155::action::{Action, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::State;
 
+use super::js_imports::log;
+
 /*
 Note: in order do optimize communication between host and the WASM module,
 we're storing the state inside the WASM module (for the time of state evaluation).

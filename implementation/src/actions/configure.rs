@@ -10,7 +10,7 @@ impl Actionable for Configure {
     fn action(self, caller: String, mut state: State) -> ActionResult {
         if self.super_owner.is_some() && caller != state.settings.super_operator
             || self.owners.is_some() && caller != state.settings.super_operator
-            || self.authorized_addresses.is_some()
+            || self.transfer_proxies.is_some()
                 && (caller != state.settings.super_operator
                     && state.settings.operators.contains(&caller))
         {
@@ -25,8 +25,8 @@ impl Actionable for Configure {
             state.settings.operators = owners;
         }
 
-        if let Some(authorized_addresses) = self.authorized_addresses {
-            state.settings.authorized_addresses = authorized_addresses;
+        if let Some(transfer_proxies) = self.transfer_proxies {
+            state.settings.transfer_proxies = transfer_proxies;
         }
 
         return Ok(HandlerResult::Write(state));

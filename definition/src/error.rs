@@ -1,8 +1,8 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::state::BalancePrecision;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum ContractError {
     RuntimeError(String),
     TransferAmountMustBeHigherThanZero,
