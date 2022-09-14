@@ -1,8 +1,10 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::state::BalancePrecision;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(tag = "kind", content = "data")]
 pub enum ContractError {
     RuntimeError(String),
     TransferAmountMustBeHigherThanZero,
