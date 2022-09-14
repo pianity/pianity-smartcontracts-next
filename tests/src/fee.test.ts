@@ -75,7 +75,6 @@ describe("test fee contract", () => {
             settings: {
                 superOperator: op.address,
                 operators: [],
-                authorizedAddresses: [],
                 erc1155: erc1155TxId,
                 custodian: op.address,
                 exchangeToken: "DOL",

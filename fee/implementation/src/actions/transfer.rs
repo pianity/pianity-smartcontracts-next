@@ -55,7 +55,7 @@ impl AsyncActionable for Transfer {
 
         let is_resell = token_owner != state.settings.custodian;
 
-        let rate = if !is_resell { token.rate } else { UNIT };
+        let rate = if is_resell { token.rate } else { UNIT };
 
         let mut transfers: Vec<Erc1155Action::Transfer> = Vec::new();
 
