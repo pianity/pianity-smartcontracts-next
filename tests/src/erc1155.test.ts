@@ -70,9 +70,9 @@ describe("test erc1155 contract", () => {
             qty: "100",
         });
 
-        const { cachedValue } = await contract.readState();
-        expect(cachedValue.state.tokens.DOL.balances[op.address]).toBe("100");
-        expect(cachedValue.state.tokens.DOL.balances[user.address]).toBe("100");
+        const { state } = (await contract.readState()).cachedValue;
+        expect(state.tokens.DOL.balances[op.address]).toBe("100");
+        expect(state.tokens.DOL.balances[user.address]).toBe("100");
     });
 
     it("should mint an NFT", async () => {
@@ -83,8 +83,10 @@ describe("test erc1155 contract", () => {
         });
 
         const tokenId = `NFT-${mintResponse?.originalTxId}`;
+        console.log(tokenId);
 
-        const { cachedValue } = await contract.readState();
-        expect(cachedValue.state.tokens[tokenId].balances[op.address]).toBe("1");
+        const { state } = (await contract.readState()).cachedValue;
+        expect(state.tokens[tokenId].balances[op.address]).toBe("1");
+        expect(state.tokens[tokenId].ticker).toBe(tokenId);
     });
 });

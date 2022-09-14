@@ -32,6 +32,12 @@ describe("test fee contract", () => {
     let feeTxId: string;
     let feeInteract: ReturnType<typeof createInteractor<FeeAction>>;
 
+    const nftId = "NFT-0";
+    const nftPrice = 10 * UNIT;
+    const nftRate = 0.1 * UNIT;
+    const opBaseBalance = 100 * UNIT;
+    const userBaseBalance = 100 * UNIT;
+
     beforeAll(async () => {
         LoggerFactory.INST.logLevel("error");
         LoggerFactory.INST.logLevel("debug", "WASM:Rust");
@@ -45,7 +51,7 @@ describe("test fee contract", () => {
         user = await warp.testing.generateWallet();
         console.log("user address:", user.address);
 
-        const erc1155InitState = {
+        const erc1155InitState: Erc1155State = {
             name: "TEST-ERC1155",
             settings: {
                 superOperator: op.address,
@@ -56,11 +62,22 @@ describe("test fee contract", () => {
                 DOL: {
                     ticker: "DOL",
                     balances: {
-                        [op.address]: `${100 * UNIT}`,
+                        [op.address]: `${opBaseBalance}`,
+                        [user.address]: `${userBaseBalance}`,
                     },
                 },
+                [nftId]: {
+                    balances: {
+                        [op.address]: "1",
+                    },
+                    ticker: nftId,
+                },
             },
-            approvals: {},
+            approvals: {
+                [user.address]: {
+                    [op.address]: true,
+                },
+            },
         };
 
         erc1155TxId = (await deployERC1155(warp, op.jwk, erc1155InitState)).contractTxId;
@@ -94,62 +111,47 @@ describe("test fee contract", () => {
         await arlocal.stop();
     });
 
-    it("should activate the fee contract on the erc1155 one", async () => {
-        console.log("Activate the Fee proxy contract...");
+    it("should activate the Fee contract on the Erc1155 one", async () => {
         await erc1155Interact({
             function: "configure",
             transferProxies: [feeTxId, op.address],
         });
 
-        const { cachedValue } = await erc1155Contract.readState();
-        expect(cachedValue.state.settings.transferProxies).toEqual([feeTxId, op.address]);
+        const { state } = (await erc1155Contract.readState()).cachedValue;
+        expect(state.settings.transferProxies).toEqual([feeTxId, op.address]);
     });
 
-    it("should draw the rest of the owl", async () => {
-        console.log("Mint an NFT...");
-        const mintResponse = await erc1155Interact({
-            function: "mint",
-            prefix: "NFT",
-            qty: "1",
-        });
-
-        const tokenId = `NFT-${mintResponse?.originalTxId}`;
-
-        console.log("Create the fees...");
-        await feeInteract({
-            function: "createFee",
-            tokenId,
+    it("attach fees to an NFT", async () => {
+        const fees = {
+            id: nftId,
             fees: {
                 [op.address]: UNIT,
             },
             rate: UNIT * 0.1,
+        };
+
+        await feeInteract({
+            function: "createFee",
+            ...fees,
+            tokenId: nftId,
         });
 
-        console.log("Transfer some DOL to user...");
-        await erc1155Interact({
-            function: "transfer",
-            from: op.address,
-            tokenId: "DOL",
-            to: user.address,
-            qty: `${5 * UNIT}`,
-        });
+        const { state } = (await feeContract.readState()).cachedValue;
+        expect(state.tokens[nftId]).toEqual(fees);
+    });
 
-        console.log("Approve op for user...");
-        await erc1155Interact(
-            {
-                function: "setApprovalForAll",
-                operator: op.address,
-                approved: true,
-            },
-            user.jwk,
-        );
-
-        console.log("Buy the nft...");
+    it("should sell the NFT and pay the shareholders", async () => {
         await feeInteract({
             function: "transfer",
             to: user.address,
-            price: `${1 * UNIT}`,
-            tokenId,
+            tokenId: nftId,
+            price: `${nftPrice}`,
         });
+
+        const { state } = (await erc1155Contract.readState()).cachedValue;
+        expect(state.tokens[nftId].balances[user.address]).toBe("1");
+
+        expect(state.tokens.DOL.balances[op.address]).toBe(`${opBaseBalance + nftPrice}`);
+        expect(state.tokens.DOL.balances[user.address]).toBe(`${userBaseBalance - nftPrice}`);
     });
 });

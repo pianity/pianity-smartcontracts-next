@@ -15,8 +15,6 @@ export async function deployERC1155(warp: Warp, opWallet: JWKInterface, initStat
     const wasmGluecode = `${wasmDir}/rust-contract.js`;
     const wasmPath = `${wasmDir}/rust-contract_bg.wasm`;
 
-    console.log("deploying ERC1155...");
-
     const deployment = await warp.createContract.deploy({
         wallet: opWallet,
         initState: JSON.stringify(initState),
@@ -24,8 +22,6 @@ export async function deployERC1155(warp: Warp, opWallet: JWKInterface, initStat
         wasmGlueCode: wasmGluecode,
         src: readFileSync(wasmPath),
     });
-
-    console.log("deployed ERC1155 at:", deployment.contractTxId);
 
     return deployment;
 }
@@ -35,8 +31,6 @@ export async function deployFee(warp: Warp, opWallet: JWKInterface, initState: F
     const wasmGluecode = `${wasmDir}/rust-contract.js`;
     const wasmPath = `${wasmDir}/rust-contract_bg.wasm`;
 
-    console.log("deploying FEE...");
-
     const deployment = await warp.createContract.deploy({
         wallet: opWallet,
         initState: JSON.stringify(initState),
@@ -44,8 +38,6 @@ export async function deployFee(warp: Warp, opWallet: JWKInterface, initState: F
         wasmGlueCode: wasmGluecode,
         src: readFileSync(wasmPath),
     });
-
-    console.log("deployed FEE at:", deployment.contractTxId);
 
     return deployment;
 }
