@@ -14,6 +14,7 @@ import { State as Erc1155State } from "erc1155/State";
 import { Action as Erc1155Action } from "erc1155/Action";
 import { State as FeeState } from "fee/State";
 import { Action as FeeAction } from "fee/Action";
+import { ContractError as FeeError, ContractError1 } from "fee/ContractError";
 
 import { UNIT, deployERC1155, createInteractor, deployFee } from "@/utils";
 
@@ -105,7 +106,7 @@ describe("test fee contract", () => {
             .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
             .connect(op.jwk);
         feeInteract = createInteractor<FeeAction>(warp, feeContract, op.jwk);
-    }, 10_000);
+    }, 20_000);
 
     afterAll(async () => {
         await arlocal.stop();
@@ -121,7 +122,7 @@ describe("test fee contract", () => {
         expect(state.settings.transferProxies).toEqual([feeTxId, op.address]);
     });
 
-    it("attach fees to an NFT", async () => {
+    it("should attach fees to an NFT", async () => {
         const fees = {
             id: nftId,
             fees: {
@@ -138,6 +139,30 @@ describe("test fee contract", () => {
 
         const { state } = (await feeContract.readState()).cachedValue;
         expect(state.tokens[nftId]).toEqual(fees);
+    });
+
+    it("should throw correct error type", async () => {
+        try {
+            await feeInteract({
+                function: "transfer",
+                tokenId: nftId,
+                to: user.address,
+                price: `${opBaseBalance}`,
+            });
+        } catch (error) {
+            const notEnoughBalanceError: FeeError = {
+                kind: "Erc1155Error",
+                data: {
+                    kind: "ContractError",
+                    data: {
+                        kind: "CallerBalanceNotEnough",
+                        data: opBaseBalance + UNIT,
+                    },
+                },
+            };
+
+            expect(error).toEqual(notEnoughBalanceError);
+        }
     });
 
     it("should sell the NFT and pay the shareholders", async () => {
