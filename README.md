@@ -42,7 +42,8 @@ to be consumed in another way.
 yarn build
 ```
 
-The resulting WASM binaries with their glue codes are located `<contract>/implementation/pkg`.
+This will compile the contracts to WASM and also generate their bindings (see next section). The
+resulting WASM binaries with their glue codes are located `<contract>/implementation/pkg`.
 
 ### Generate Typescript Bindings
 
@@ -64,9 +65,9 @@ them so they can be consumed easier in TS programs. This works by using two tool
    `<contract>/scripts/generate-ts.ts`. See `gen-ts` script of `<contract>/package.json`. The *.ts*
    files are outputted to `<contract>/definition/bindings/ts`.
 
-The resulting *.ts* files are valid TS files that exports the types `State` and `Action` and all
-other types referenced inside them. In the future, the script will probably generate a valid NPM
-package to make it easy to publish/consume the generated types.
+The resulting *.ts* files are valid TS sources that export the types `State` and `Action` of their
+contract and all other types referenced inside them. In the future, the script will probably
+generate a valid NPM package to make it easy to publish/consume the generated types.
 
 ### Run the Test Suites
 
