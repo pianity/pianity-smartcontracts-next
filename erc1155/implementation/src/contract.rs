@@ -48,7 +48,7 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
                 && (state.settings.transfer_proxies.contains(&direct_caller)
                     || is_op(&state, &direct_caller)))
             {
-                return Err(ContractError::UnauthorizedAddress(original_caller));
+                return Err(ContractError::UnauthorizedAddress(direct_caller));
             }
         }
         _ => {
