@@ -7,6 +7,7 @@ mod tests {
     use schemars::JsonSchema;
 
     use crate::action::Action;
+    use crate::error::ContractError;
     use crate::state::State;
 
     const SCHEMAS_DIR: &str = "./bindings/json";
@@ -47,6 +48,7 @@ mod tests {
 
         generate::<State>("State")?;
         generate::<Action>("Action")?;
+        generate::<ContractError>("ContractError")?;
 
         Ok(())
     }

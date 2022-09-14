@@ -1,13 +1,16 @@
+use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(tag = "kind", content = "data")]
 pub enum ForeignWriteError<T: Serialize + DeserializeOwned + std::fmt::Debug> {
     #[serde(deserialize_with = "T::deserialize")]
     ContractError(T),
     ParseError,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(tag = "kind", content = "data")]
 pub enum ContractError {
     RuntimeError(String),
     TransferAmountMustBeHigherThanZero,
