@@ -7,9 +7,8 @@
         "tests"
     ],
     "scripts": {
-        "build": "yarn build-contracts && yarn build-contracts-types",
-        "build-contracts": "yarn workspaces foreach --exclude root -vitp run build",
-        "build-contracts-types": "yarn workspaces foreach --exclude root -vitp run build-types",
+        "build": "yarn workspaces foreach --exclude root -vitp run build",
+        "gen-bindings": "yarn workspaces foreach --exclude root -vitp run gen-bindings",
         "test": "yarn workspace tests run test",
         "postinstall": "husky install && cp ./node_modules/koumu/build/commit-msg .husky/commit-msg && chmod +x .husky/commit-msg",
         "prepack": "pinst --disable",

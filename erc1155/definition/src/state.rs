@@ -62,7 +62,7 @@ pub struct Settings {
     pub super_operator: String,
     pub operators: Vec<String>,
 
-    /// Addesses authorized to execute transfers.
+    /// Direct callers addresses authorized to execute transfers.
     ///
     /// If empty, all addresses are authorized.
     pub transfer_proxies: Vec<String>,

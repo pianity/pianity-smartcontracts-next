@@ -7,9 +7,9 @@
     "license": "MIT",
     "scripts": {
         "build": "wasm-pack build --target nodejs --release --out-name rust-contract implementation",
-        "build-types": "yarn build-types-json && yarn build-types-ts",
-        "build-types-json": "RUN_GENERATE=1 cargo test run_generate -- --nocapture",
-        "build-types-ts": "ts-node --transpileOnly ./scripts/json2ts.ts"
+        "gen-bindings": "yarn gen-json && yarn gen-ts",
+        "gen-json": "GENERATE_JSON=1 cargo test generate_json -- --nocapture",
+        "gen-ts": "ts-node --transpileOnly ./scripts/generate-ts.ts"
     },
     "engines": {
         "node": ">=16.5"

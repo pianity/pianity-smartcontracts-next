@@ -14,10 +14,10 @@ mkdirSync(BINDINGS_TS, { recursive: true });
 
 // NOTE:
 for (const fileName of readdirSync(BINDINGS_JSON)) {
-  const jsonPath = join(BINDINGS_JSON, fileName);
-  const tsPath = join(BINDINGS_TS, parse(fileName).name + ".ts");
+    const jsonPath = join(BINDINGS_JSON, fileName);
+    const tsPath = join(BINDINGS_TS, parse(fileName).name + ".ts");
 
-  compileFromFile(jsonPath, {
-    additionalProperties: false,
-  }).then((tsContent) => writeFileSync(tsPath, tsContent));
+    compileFromFile(jsonPath, {
+        additionalProperties: false,
+    }).then((tsContent) => writeFileSync(tsPath, tsContent));
 }
