@@ -142,27 +142,31 @@ describe("test fee contract", () => {
     });
 
     it("should throw correct error type", async () => {
+        let error;
+
         try {
             await feeInteract({
                 function: "transfer",
                 tokenId: nftId,
                 to: user.address,
-                price: `${opBaseBalance}`,
+                price: `${opBaseBalance + UNIT}`,
             });
-        } catch (error) {
-            const notEnoughBalanceError: FeeError = {
-                kind: "Erc1155Error",
-                data: {
-                    kind: "ContractError",
-                    data: {
-                        kind: "CallerBalanceNotEnough",
-                        data: opBaseBalance + UNIT,
-                    },
-                },
-            };
-
-            expect(error).toEqual(notEnoughBalanceError);
+        } catch (caughtError) {
+            error = caughtError;
         }
+
+        const notEnoughBalanceError: FeeError = {
+            kind: "Erc1155Error",
+            data: {
+                kind: "ContractError",
+                data: {
+                    kind: "CallerBalanceNotEnough",
+                    data: opBaseBalance,
+                },
+            },
+        };
+
+        expect(error).toEqual(notEnoughBalanceError);
     });
 
     it("should sell the NFT and pay the shareholders", async () => {
