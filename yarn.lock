@@ -9427,7 +9427,7 @@ __metadata:
     ts-node: ^10.4.0
     tsconfig-paths: ^4.0.0
     typescript: ^4.7.4
-    warp-contracts: "pianity/warp#99e905f"
+    warp-contracts: "pianity/warp#99e905f27600f059bbdce9298d04e48e8bc0bdf8"
   languageName: unknown
   linkType: soft
 
@@ -10043,9 +10043,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"warp-contracts@portal:/home/noom/dev/pianity/warp-fork::locator=root%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "warp-contracts@portal:/home/noom/dev/pianity/warp-fork::locator=root%40workspace%3A."
+"warp-contracts@pianity/warp#99e905f27600f059bbdce9298d04e48e8bc0bdf8":
+  version: 1.2.3
+  resolution: "warp-contracts@https://github.com/pianity/warp.git#commit=99e905f27600f059bbdce9298d04e48e8bc0bdf8"
   dependencies:
     "@assemblyscript/loader": ^0.19.23
     "@idena/vrf-js": ^1.0.1
@@ -10065,8 +10065,9 @@ __metadata:
     stream-buffers: ^3.0.2
     unzipit: ^1.4.0
     vm2: 3.9.9
+  checksum: c874219aa4ea50a3fdb247c81cd568d3a51dbe0fa7336e84e3fa0a784bbb76ee8fc6ff5a452ba543a521cc31bf8ab8447afd0dcd56f48febce51dd478a1a68c0
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "warp-erc1155@workspace:erc1155":
   version: 0.0.0-use.local
@@ -10082,6 +10083,17 @@ __metadata:
 "warp-fee@workspace:fee":
   version: 0.0.0-use.local
   resolution: "warp-fee@workspace:fee"
+  dependencies:
+    "@types/node": ^18.6.3
+    json-schema-to-typescript: ^11.0.1
+    ts-node: ^10.9.1
+    typescript: ^4.6.2
+  languageName: unknown
+  linkType: soft
+
+"warp-packs@workspace:packs":
+  version: 0.0.0-use.local
+  resolution: "warp-packs@workspace:packs"
   dependencies:
     "@types/node": ^18.6.3
     json-schema-to-typescript: ^11.0.1
