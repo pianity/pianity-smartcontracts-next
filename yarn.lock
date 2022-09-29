@@ -1852,15 +1852,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/bn.js@npm:*":
-  version: 5.1.1
-  resolution: "@types/bn.js@npm:5.1.1"
-  dependencies:
-    "@types/node": "*"
-  checksum: e50ed2dd3abe997e047caf90e0352c71e54fc388679735217978b4ceb7e336e51477791b715f49fd77195ac26dd296c7bad08a3be9750e235f9b2e1edb1b51c2
-  languageName: node
-  linkType: hard
-
 "@types/body-parser@npm:*":
   version: 1.19.2
   resolution: "@types/body-parser@npm:1.19.2"
@@ -1912,15 +1903,6 @@ __metadata:
     "@types/keygrip": "*"
     "@types/node": "*"
   checksum: d3759efc1182cb0651808570ae13638677b67b0ea724eef7b174e58ffe6ea044b62c7c2715e532f76f88fce4dd8101ed32ac6fbb73226db654017924e8a2a1e6
-  languageName: node
-  linkType: hard
-
-"@types/elliptic@npm:^6.4.14":
-  version: 6.4.14
-  resolution: "@types/elliptic@npm:6.4.14"
-  dependencies:
-    "@types/bn.js": "*"
-  checksum: d5a64f540e0ed4b74a12dfa5cc88c0aa7b531eab3b7a9fab17948ffbfc6e01814230e63d7417ce1b607dbd8b5d70e1b64f5afac632deabf96e44875aaac0ae1b
   languageName: node
   linkType: hard
 
@@ -9435,18 +9417,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "tests@workspace:tests"
   dependencies:
-    "@idena/vrf-js": ^1.0.1
-    "@types/elliptic": ^6.4.14
     "@types/node": ^18.0.0
     arlocal: ^1.1.53
     arweave: 1.11.6
-    elliptic: ^6.5.4
     jest: ^29.0.3
     ts-jest: ^29.0.0
     ts-node: ^10.4.0
     tsconfig-paths: ^4.0.0
     typescript: ^4.7.4
-    warp-contracts: 1.2.12
+    warp-contracts: "pianity/warp#99e905f27600f059bbdce9298d04e48e8bc0bdf8"
   languageName: unknown
   linkType: soft
 
@@ -10062,9 +10041,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"warp-contracts@npm:1.2.12":
-  version: 1.2.12
-  resolution: "warp-contracts@npm:1.2.12"
+"warp-contracts@pianity/warp#99e905f27600f059bbdce9298d04e48e8bc0bdf8":
+  version: 1.2.3
+  resolution: "warp-contracts@https://github.com/pianity/warp.git#commit=99e905f27600f059bbdce9298d04e48e8bc0bdf8"
   dependencies:
     "@assemblyscript/loader": ^0.19.23
     "@idena/vrf-js": ^1.0.1
@@ -10084,7 +10063,7 @@ __metadata:
     stream-buffers: ^3.0.2
     unzipit: ^1.4.0
     vm2: 3.9.9
-  checksum: 4770260d90ca69fd1dd0773debf7f9c85ed43ac4695aa5c8e6c20bc20ecb9618c63de2745a5a67ebeda1e0b0959f4985f012a270ff530046e53fa09ae697eefa
+  checksum: c874219aa4ea50a3fdb247c81cd568d3a51dbe0fa7336e84e3fa0a784bbb76ee8fc6ff5a452ba543a521cc31bf8ab8447afd0dcd56f48febce51dd478a1a68c0
   languageName: node
   linkType: hard
 
