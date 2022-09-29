@@ -35,7 +35,8 @@ describe("test erc1155 contract", () => {
             settings: {
                 superOperator: op.address,
                 operators: [],
-                transferProxies: [],
+                proxies: [],
+                allowFreeTransfer: true,
             },
             tokens: {
                 DOL: {
@@ -83,7 +84,6 @@ describe("test erc1155 contract", () => {
         });
 
         const tokenId = `NFT-${mintResponse?.originalTxId}`;
-        console.log("TOKEN_ID", tokenId);
 
         const { state } = (await contract.readState()).cachedValue;
         expect(state.tokens[tokenId].balances[op.address]).toBe("1");

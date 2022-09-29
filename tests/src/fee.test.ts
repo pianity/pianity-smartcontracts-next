@@ -34,8 +34,8 @@ describe("test fee contract", () => {
 
     beforeAll(async () => {
         LoggerFactory.INST.logLevel("error");
-        LoggerFactory.INST.logLevel("debug", "WASM:Rust");
-        LoggerFactory.INST.logLevel("debug", "ContractHandler");
+        LoggerFactory.INST.logLevel("error", "WASM:Rust");
+        LoggerFactory.INST.logLevel("error", "ContractHandler");
 
         arlocal = new Arlocal(1985, false, `./arlocal.fee.db`, false);
         await arlocal.start();
@@ -48,7 +48,8 @@ describe("test fee contract", () => {
             settings: {
                 superOperator: op.address,
                 operators: [],
-                transferProxies: [],
+                proxies: [],
+                allowFreeTransfer: true,
             },
             tokens: {
                 DOL: {
@@ -111,11 +112,11 @@ describe("test fee contract", () => {
     it("should activate the Fee contract on the Erc1155 one", async () => {
         await erc1155Interact({
             function: "configure",
-            transferProxies: [feeTxId, op.address],
+            proxies: [feeTxId],
         });
 
         const { state } = (await erc1155Contract.readState()).cachedValue;
-        expect(state.settings.transferProxies).toEqual([feeTxId, op.address]);
+        expect(state.settings.proxies).toEqual([feeTxId]);
     });
 
     it("should attach fees to an NFT", async () => {
@@ -175,8 +176,35 @@ describe("test fee contract", () => {
 
         const { state } = (await erc1155Contract.readState()).cachedValue;
         expect(state.tokens[nftId].balances[user.address]).toBe("1");
-
         expect(state.tokens.DOL.balances[op.address]).toBe(`${opBaseBalance + nftPrice}`);
         expect(state.tokens.DOL.balances[user.address]).toBe(`${userBaseBalance - nftPrice}`);
+    });
+
+    it("should mint nft", async () => {
+        const txId = (
+            await feeInteract({
+                function: "mintNft",
+                scarcity: "legendary",
+                fees: {
+                    [op.address]: UNIT,
+                },
+                rate: nftRate,
+            })
+        )?.originalTxId;
+
+        const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
+        const { state: feeState } = (await feeContract.readState()).cachedValue;
+
+        console.log(JSON.stringify(erc1155State, undefined, 2));
+
+        for (let i = 0; i < 10; i++) {
+            const tokenId = `LEGENDARY-${i + 1}-${txId}`;
+
+            expect(erc1155State.tokens[tokenId]).toBeDefined();
+            expect(feeState.tokens[tokenId]).toBeDefined();
+        }
+
+        expect(erc1155State.tokens[`LEGENDARY-11-${txId}`]).toBeUndefined();
+        expect(feeState.tokens[`LEGENDARY-11-${txId}`]).toBeUndefined();
     });
 });
