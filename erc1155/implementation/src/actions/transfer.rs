@@ -4,7 +4,7 @@ use warp_erc1155::state::{Balance, State};
 
 use crate::utils::is_op;
 
-use super::{approval::is_approved_for_all_impl, Actionable};
+use super::{approval::is_approved_for_all_internal, Actionable};
 
 impl Actionable for Transfer {
     fn action(self, caller: String, mut state: State) -> ActionResult {
@@ -13,16 +13,16 @@ impl Actionable for Transfer {
         }
 
         let from = if let Some(from) = self.from {
-            if from.len() == 0 && !is_op(&state, &caller) {
-                return Err(ContractError::UnauthorizedAddress(caller));
-            }
-
             from
         } else {
             caller.clone()
         };
 
-        if from != caller && !is_approved_for_all_impl(&state, &caller, &from) {
+        if !state.settings.allow_free_transfer && !is_op(&state, &from) {
+            return Err(ContractError::UnauthorizedAddress(from));
+        }
+
+        if from != caller && !is_approved_for_all_internal(&state, &caller, &from) {
             return Err(ContractError::UnauthorizedTransfer(from));
         }
 

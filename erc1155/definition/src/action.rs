@@ -25,7 +25,7 @@ pub struct Transfer {
 pub struct Configure {
     pub super_owner: Option<String>,
     pub owners: Option<Vec<String>>,
-    pub transfer_proxies: Option<Vec<String>>,
+    pub proxies: Option<Vec<String>>,
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]

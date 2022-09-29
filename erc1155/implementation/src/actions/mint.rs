@@ -42,7 +42,6 @@ impl Actionable for Mint {
         }
 
         let token = Token {
-            // TODO: What should `ticker` be? Is it necessary?
             ticker: token_id.clone(),
             balances: HashMap::from([(caller.to_string(), Balance::new(self.qty.value))]),
         };
@@ -52,53 +51,3 @@ impl Actionable for Mint {
         Ok(HandlerResult::Write(state))
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use std::collections::HashMap;
-//
-//     use warp_erc1155::{
-//         action::{HandlerResult, Mint},
-//         state::{Balance, Settings, State, Token},
-//     };
-//
-//     use super::mint;
-//
-//     fn as_write(result: HandlerResult) -> State {
-//         if let HandlerResult::Write(state) = result {
-//             state
-//         } else {
-//             panic!("Result isn't a write");
-//         }
-//     }
-//
-//     #[test]
-//     fn mint_test() {
-//         let state = State {
-//             settings: Settings {
-//                 ..Default::default()
-//             },
-//             // tokens: HashMap::from([(
-//             //     "a".to_string(),
-//             //     Token {
-//             //         ticker: "a".to_string(),
-//             //         balances: HashMap::from([("".to_string(), 1)]),
-//             //     },
-//             // )]),
-//             ..Default::default()
-//         };
-//
-//         let state = as_write(
-//             mint(
-//                 state,
-//                 "".to_string(),
-//                 Mint {
-//                     ticker: None,
-//                     prefix: None,
-//                     qty: Balance::new(1),
-//                 },
-//             )
-//             .unwrap(),
-//         );
-//     }
-// }

@@ -7,11 +7,9 @@ use warp_erc1155::action::ReadResponse;
 use warp_erc1155::action::SetApprovalForAll;
 use warp_erc1155::state::State;
 
-use crate::contract_utils::js_imports::Transaction;
-
 use super::Actionable;
 
-pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> bool {
+pub fn is_approved_for_all_internal(state: &State, operator: &str, owner: &str) -> bool {
     match state.approvals.get(owner) {
         Some(approved_ops) => approved_ops.get(operator).unwrap_or(&false).to_owned(),
         None => false,
@@ -20,7 +18,7 @@ pub fn is_approved_for_all_impl(state: &State, operator: &str, owner: &str) -> b
 
 impl Actionable for IsApprovedForAll {
     fn action(self, caller: String, mut state: State) -> ActionResult {
-        let approved = is_approved_for_all_impl(&state, &self.operator, &self.owner);
+        let approved = is_approved_for_all_internal(&state, &self.operator, &self.owner);
 
         Ok(HandlerResult::Read(
             state,

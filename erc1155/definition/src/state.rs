@@ -2,8 +2,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::action::Action;
-
 mod string {
     use std::fmt::Display;
     use std::str::FromStr;
@@ -61,11 +59,8 @@ pub struct Token {
 pub struct Settings {
     pub super_operator: String,
     pub operators: Vec<String>,
-
-    /// Direct callers addresses authorized to execute transfers.
-    ///
-    /// If empty, all addresses are authorized.
-    pub transfer_proxies: Vec<String>,
+    pub proxies: Vec<String>,
+    pub allow_free_transfer: bool,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
