@@ -1,26 +1,19 @@
-import { describe, it, expect, test, beforeAll, afterAll } from "@jest/globals";
-import { JWKInterface } from "arweave/node/lib/wallet";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import Arlocal from "arlocal";
-import {
-    Contract,
-    LoggerFactory,
-    Warp,
-    WarpFactory,
-    WriteInteractionResponse,
-} from "warp-contracts";
+import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 
 import { State as Erc1155State } from "erc1155/State";
 import { Action as Erc1155Action } from "erc1155/Action";
 import { State as FeeState } from "fee/State";
 import { Action as FeeAction } from "fee/Action";
-import { ContractError as FeeError, ContractError1 } from "fee/ContractError";
+import { ContractError as FeeError } from "fee/ContractError";
 
-import { UNIT, deployERC1155, createInteractor, deployFee } from "@/utils";
+import { UNIT, deployContract, createInteractor } from "@/utils";
 
 describe("test fee contract", () => {
-    let warp: Warp;
     let arlocal: Arlocal;
+    let warp: Warp;
 
     let op: Wallet;
     let user: Wallet;
@@ -44,13 +37,11 @@ describe("test fee contract", () => {
         LoggerFactory.INST.logLevel("debug", "WASM:Rust");
         LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
-        warp = WarpFactory.forLocal(1985);
-        arlocal = new Arlocal(1985, false, `./arlocal.2.db`, false);
+        arlocal = new Arlocal(1985, false, `./arlocal.fee.db`, false);
         await arlocal.start();
+        warp = WarpFactory.forLocal(1985, undefined, { inMemory: true, dbLocation: "/dev/null" });
         op = await warp.testing.generateWallet();
-        console.log("op address:", op.address);
         user = await warp.testing.generateWallet();
-        console.log("user address:", user.address);
 
         const erc1155InitState: Erc1155State = {
             name: "TEST-ERC1155",
@@ -81,7 +72,8 @@ describe("test fee contract", () => {
             },
         };
 
-        erc1155TxId = (await deployERC1155(warp, op.jwk, erc1155InitState)).contractTxId;
+        erc1155TxId = (await deployContract(warp, op.jwk, "erc1155", erc1155InitState))
+            .contractTxId;
         erc1155Contract = warp
             .contract<Erc1155State>(erc1155TxId)
             .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
@@ -100,12 +92,16 @@ describe("test fee contract", () => {
             tokens: {},
         };
 
-        feeTxId = (await deployFee(warp, op.jwk, feeInitState)).contractTxId;
+        feeTxId = (await deployContract(warp, op.jwk, "fee", feeInitState)).contractTxId;
         feeContract = warp
             .contract<FeeState>(feeTxId)
             .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
             .connect(op.jwk);
         feeInteract = createInteractor<FeeAction>(warp, feeContract, op.jwk);
+
+        console.log(
+            `OP: ${op.address}\nUSER: ${user.address}\nFEE: ${feeTxId}\nERC1155: ${erc1155TxId}`,
+        );
     }, 20_000);
 
     afterAll(async () => {
@@ -128,7 +124,7 @@ describe("test fee contract", () => {
             fees: {
                 [op.address]: UNIT,
             },
-            rate: UNIT * 0.1,
+            rate: nftRate,
         };
 
         await feeInteract({

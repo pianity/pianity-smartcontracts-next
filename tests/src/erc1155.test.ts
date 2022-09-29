@@ -3,14 +3,14 @@ import Arlocal from "arlocal";
 import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 
-import { State as State } from "erc1155/State";
-import { Action as Action } from "erc1155/Action";
+import { State } from "erc1155/State";
+import { Action } from "erc1155/Action";
 
-import { deployERC1155, createInteractor } from "@/utils";
+import { createInteractor, deployContract } from "@/utils";
 
 describe("test erc1155 contract", () => {
-    let warp: Warp;
     let arlocal: Arlocal;
+    let warp: Warp;
 
     let op: Wallet;
     let user: Wallet;
@@ -24,13 +24,11 @@ describe("test erc1155 contract", () => {
         LoggerFactory.INST.logLevel("debug", "WASM:Rust");
         LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
-        warp = WarpFactory.forLocal(1984);
-        arlocal = new Arlocal(1984, false, `./arlocal.db`, false);
+        arlocal = new Arlocal(1984, false, `./arlocal.erc1155.db`, false);
         await arlocal.start();
+        warp = WarpFactory.forLocal(1984, undefined, { inMemory: true, dbLocation: "/dev/null" });
         op = await warp.testing.generateWallet();
-        console.log("op address:", op.address);
         user = await warp.testing.generateWallet();
-        console.log("user address:", user.address);
 
         const initState = {
             name: "TEST-ERC1155",
@@ -50,13 +48,15 @@ describe("test erc1155 contract", () => {
             approvals: {},
         };
 
-        contractId = (await deployERC1155(warp, op.jwk, initState)).contractTxId;
+        contractId = (await deployContract(warp, op.jwk, "erc1155", initState)).contractTxId;
         contract = warp
             .contract<State>(contractId)
             .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
             .connect(op.jwk);
         interact = createInteractor<Action>(warp, contract, op.jwk);
-    });
+
+        console.log(`OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${contractId}`);
+    }, 20_000);
 
     afterAll(async () => {
         await arlocal.stop();
@@ -83,7 +83,7 @@ describe("test erc1155 contract", () => {
         });
 
         const tokenId = `NFT-${mintResponse?.originalTxId}`;
-        console.log(tokenId);
+        console.log("TOKEN_ID", tokenId);
 
         const { state } = (await contract.readState()).cachedValue;
         expect(state.tokens[tokenId].balances[op.address]).toBe("1");
