@@ -10,10 +10,7 @@
         "build": "yarn build-contracts && yarn gen-bindings",
         "build-contracts": "yarn workspaces foreach --exclude root -vitp run build",
         "gen-bindings": "yarn workspaces foreach --exclude root -vitp run gen-bindings",
-        "test": "yarn workspace tests run test",
-        "postinstall": "husky install && cp ./node_modules/koumu/build/commit-msg .husky/commit-msg && chmod +x .husky/commit-msg",
-        "prepack": "pinst --disable",
-        "postpack": "pinst --enable"
+        "test": "yarn workspace tests run test"
     },
     "dependencies": {
         "@pianity/eslint-config": "0.0.2",
@@ -27,11 +24,7 @@
         "typescript": "4.7.4"
     },
     "packageManager": "yarn@3.2.0",
-    "resolutions": {
-        "warp-contracts": "portal:/home/noom/dev/pianity/warp-fork"
-    },
     "devDependencies": {
-        "husky": "8.0.1",
-        "koumu": "0.0.15"
+        "koumu": "0.1.0"
     }
 }
