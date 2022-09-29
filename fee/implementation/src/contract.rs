@@ -24,13 +24,10 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
 
     match action {
         Action::CreateFee(action) => action.action(direct_caller, state).await,
-
         Action::Transfer(action) => action.action(direct_caller, state).await,
-
         Action::Configure(action) => action.action(direct_caller, state),
-
         Action::Evolve(action) => action.action(direct_caller, state),
-
         Action::Batch(action) => action.action(direct_caller, state).await,
+        Action::MintNft(action) => action.action(direct_caller, state).await,
     }
 }

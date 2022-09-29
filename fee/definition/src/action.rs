@@ -42,6 +42,24 @@ pub struct Batch {
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NftScarcity {
+    Unique,
+    Legendary,
+    Epic,
+    Rare,
+}
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MintNft {
+    pub scarcity: NftScarcity,
+    pub ticker: Option<String>,
+    pub fees: Fees,
+    pub rate: u32,
+}
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
     CreateFee(CreateFee),
@@ -51,6 +69,8 @@ pub enum Action {
     Configure(Configure),
 
     Evolve(Evolve),
+
+    MintNft(MintNft),
 
     Batch(Batch),
 }

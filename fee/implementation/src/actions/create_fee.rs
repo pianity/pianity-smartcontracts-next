@@ -16,9 +16,38 @@ use crate::contract_utils::foreign_call::read_foreign_contract_state;
 
 use warp_erc1155::state::State as Erc1155State;
 
+pub fn create_fee_internal(create_fee: &CreateFee, state: &mut State) -> Result<(), ContractError> {
+    if create_fee.rate > UNIT {
+        return Err(ContractError::InvalidRate);
+    }
+
+    // Check that the sum of all fees is equal to UNIT
+    let fees_sum = create_fee
+        .fees
+        .iter()
+        .map(|(_, fee)| *fee)
+        .reduce(|sum, fee| sum + fee)
+        .unwrap_or(0);
+
+    if fees_sum != UNIT {
+        return Err(ContractError::InvalidFee);
+    }
+
+    state.tokens.insert(
+        create_fee.token_id.clone(),
+        Token {
+            id: create_fee.token_id.clone(),
+            fees: create_fee.fees.clone(),
+            rate: create_fee.rate,
+        },
+    );
+
+    Ok(())
+}
+
 #[async_trait(?Send)]
 impl AsyncActionable for CreateFee {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
+    async fn action(self, _caller: String, mut state: State) -> ActionResult {
         if state.tokens.contains_key(&self.token_id) {
             return Err(ContractError::TokenAlreadyExists(self.token_id));
         }
@@ -45,30 +74,7 @@ impl AsyncActionable for CreateFee {
             return Err(ContractError::TokenDoesNotExist(self.token_id));
         }
 
-        if self.rate > UNIT {
-            return Err(ContractError::InvalidRate);
-        }
-
-        // Check that the sum of all fees is equal to UNIT
-        let fees_sum = self
-            .fees
-            .iter()
-            .map(|(_, fee)| *fee)
-            .reduce(|sum, fee| sum + fee)
-            .unwrap_or(0);
-
-        if fees_sum != UNIT {
-            return Err(ContractError::InvalidFee);
-        }
-
-        state.tokens.insert(
-            self.token_id.clone(),
-            Token {
-                id: self.token_id,
-                fees: self.fees,
-                rate: self.rate,
-            },
-        );
+        create_fee_internal(&self, &mut state)?;
 
         Ok(HandlerResult::Write(state))
     }
