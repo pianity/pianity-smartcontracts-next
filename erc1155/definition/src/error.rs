@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::BalancePrecision;
+use crate::state::Balance;
 
 #[derive(JsonSchema, Serialize, Deserialize, Debug)]
 #[serde(tag = "kind", content = "data")]
@@ -11,7 +11,7 @@ pub enum ContractError {
     TransferFromAndToCannotBeEqual,
     TokenNotFound(String),
     IDontLikeThisContract,
-    CallerBalanceNotEnough(BalancePrecision),
+    OwnerBalanceNotEnough(String),
     OnlyOwnerCanEvolve,
     EvolveNotAllowed,
 

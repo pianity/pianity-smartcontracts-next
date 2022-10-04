@@ -9,6 +9,7 @@ coverage
 .idea
 bindings/
 logs
+cache/
 
 # so that each developer won't overwrite their own local contract address
 contracts-registry.address.test.txt

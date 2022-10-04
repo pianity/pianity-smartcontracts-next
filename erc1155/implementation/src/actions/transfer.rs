@@ -40,7 +40,7 @@ impl Actionable for Transfer {
         let from_balance = *token.balances.get(&from).unwrap_or(&Balance::new(0));
 
         if from_balance.value < self.qty.value {
-            return Err(ContractError::CallerBalanceNotEnough(from_balance.value));
+            return Err(ContractError::OwnerBalanceNotEnough(from));
         }
 
         let from_new_balance = Balance::new(from_balance.value - self.qty.value);

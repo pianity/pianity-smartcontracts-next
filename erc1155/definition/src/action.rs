@@ -38,6 +38,14 @@ pub struct Mint {
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct Burn {
+    pub token_id: String,
+    pub qty: Balance,
+    pub owner: Option<String>,
+}
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SetApprovalForAll {
     pub operator: String,
     pub approved: bool,
@@ -66,19 +74,13 @@ pub struct Evolve {
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
     BalanceOf(BalanceOf),
-
     Transfer(Transfer),
-
     Configure(Configure),
-
     SetApprovalForAll(SetApprovalForAll),
-
     IsApprovedForAll(IsApprovedForAll),
-
     Evolve(Evolve),
-
     Mint(Mint),
-
+    Burn(Burn),
     Batch(Batch),
 }
 

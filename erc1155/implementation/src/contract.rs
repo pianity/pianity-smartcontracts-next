@@ -5,7 +5,6 @@ use warp_erc1155::state::State;
 
 use crate::actions::{Actionable, *};
 use crate::contract_utils::js_imports::{SmartWeave, Transaction};
-use crate::utils::is_op;
 
 #[async_recursion(?Send)]
 pub async fn handle(state: State, action: Action) -> ActionResult {
@@ -26,6 +25,7 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
         Action::SetApprovalForAll(action) => action.action(effective_caller, state),
         Action::IsApprovedForAll(action) => action.action(effective_caller, state),
         Action::Mint(action) => action.action(effective_caller, state),
+        Action::Burn(action) => action.action(effective_caller, state),
         Action::Batch(action) => action.action(effective_caller, state).await,
     }
 }
