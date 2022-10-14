@@ -4,6 +4,7 @@
     "workspaces": [
         "erc1155",
         "fee",
+        "packs",
         "tests"
     ],
     "scripts": {
