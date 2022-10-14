@@ -54,16 +54,6 @@ const opBaseBalance = 100 * UNIT;
 const userBaseBalance = 100 * UNIT;
 
 function mintNfts(baseIds: string[]): Erc1155Action[] {
-    // const iToPrefix = (i: number) => {
-    //     switch (i) {
-    //         case 0: return "UNIQUE";
-    //         case 1: return "LEGENDARY";
-    //         case 2: return "EPIC";
-    //         case 3: return "RARE";
-    //         default: throw new Error("Invalid rarity");
-    //     }
-    // };
-
     return baseIds.flatMap((baseId, editions) =>
         range(editions * 10 || 1).map((i) => ({
             function: "mint",
@@ -79,16 +69,12 @@ beforeAll(async () => {
     // LoggerFactory.INST.logLevel("debug", "WASM:Rust");
     // LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
-    // arlocal = new Arlocal(1986, false, `./arlocal.packs.db`, false);
-    // await arlocal.start();
+    arlocal = new Arlocal(1986, false, `./arlocal.packs.db`, false);
+    await arlocal.start();
 
-    // warp = WarpFactory.forLocal(1986, undefined, { inMemory: true, dbLocation: "/dev/null" });
-    // op = await warp.testing.generateWallet();
-    // user = await warp.testing.generateWallet();
-
-    warp = WarpFactory.forMainnet({ inMemory: true, dbLocation: "/dev/null" });
-    op = await generateWallet();
-    user = await generateWallet();
+    warp = WarpFactory.forLocal(1986, undefined, { inMemory: true, dbLocation: "/dev/null" });
+    op = await warp.testing.generateWallet();
+    user = await warp.testing.generateWallet();
 
     const erc1155InitState: Erc1155State = {
         name: "TEST-ERC1155",
@@ -128,17 +114,6 @@ beforeAll(async () => {
         },
     };
 
-    // for (let i = 0; i < 10; i++) {
-    //     const tokenId = `${i + 1}-LEGENDARY-NFT`;
-    //
-    //     erc1155InitState.tokens[tokenId] = {
-    //         balances: {
-    //             [op.address]: "1",
-    //         },
-    //         ticker: tokenId,
-    //     };
-    // }
-
     erc1155TxId = (await deployContract(warp, op.jwk, "erc1155", erc1155InitState)).contractTxId;
     erc1155Contract = warp
         .contract<Erc1155State>(erc1155TxId)
@@ -149,8 +124,6 @@ beforeAll(async () => {
         })
         .connect(op.jwk);
     erc1155Interact = createInteractor<Erc1155Action>(warp, erc1155Contract, op.jwk);
-
-    // await warp.testing.mineBlock();
 
     const packsInitState: PacksState = {
         name: "TEST-PACKS",
@@ -177,8 +150,6 @@ beforeAll(async () => {
         vrf: true,
     });
 
-    // await warp.testing.mineBlock();
-
     console.log(
         `OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${erc1155TxId}\nPACKS: ${packsTxId}`,
     );
@@ -193,8 +164,6 @@ it("should enable PACKS as a proxy to ERC1155", async () => {
         function: "configure",
         proxies: [packsTxId],
     });
-
-    // await warp.testing.mineBlock();
 
     const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
     expect(erc1155State.settings.proxies).toEqual([packsTxId]);
@@ -295,158 +264,4 @@ it("should mint packs and open all of them", async () => {
             owner: user.address,
         }),
     ).rejects.toEqual(noNftAvailable);
-
-    // for (let i = 0; i < 16; i++) {
-    //     await packsInteract({
-    //         function: "openPack",
-    //         packId: `PACK-${packTicker}`,
-    //         owner: user.address,
-    //     });
-    // }
-
-    // for (let i = 0; i < 11; i++) {
-    //     await packsInteract({
-    //         function: "openPack",
-    //         packId: packId,
-    //         owner: user.address,
-    //     });
-    //     console.log("opened pack", i);
-    // }
-    //
-    // {
-    //     const { state } = (await erc1155Contract.readState()).cachedValue;
-    //     console.log(JSON.stringify(state.tokens, undefined, 2), "\n###########################");
-    // }
 }, 70_000);
-
-// --- the rest should be deleted ---
-
-// it("should test Vrf", async () => {
-//     try {
-//         // const result = await vrfContract.readState();
-//         // const lastTxId = Object.keys(result.cachedValue.validity).pop();
-//         // const vrf = (result.cachedValue.state as any).vrf[lastTxId];
-//         // const result2 = await jsPacksInteract({ function: "vrf" });
-//         // await warp.testing.mineBlock();
-//         //
-//         // const { cachedValue } = await jsPacksContract.readState();
-//         // console.log("==============================", JSON.stringify(cachedValue.state));
-//         // const result2 = await jsPacksInteract(
-//         //     {
-//         //         function: "vrf",
-//         //     },
-//         //     { strict: false, vrf: true },
-//         // );
-//         // await warp.testing.mineBlock();
-//         // const jsState = await jsPacksContract.readState();
-//         // console.log(JSON.stringify(jsState.cachedValue.state, undefined, 2));
-//         // const result = await packsInteract(
-//         //     {
-//         //         function: "transfer",
-//         //         tokenId: "DOL",
-//         //         to: user.address,
-//         //         price: "1",
-//         //     },
-//         //     { strict: false, vrf: true },
-//         // );
-//         // await warp.testing.mineBlock();
-//         // const thing = await packsContract.readState();
-//         // thing.cachedValue.validity;
-//         // console.log(JSON.stringify(cachedValue.state));
-//
-//         for (let i = 0; i < 5; i++) {
-//             // await warp.testing.mineBlock();
-//
-//             const txId = (
-//                 await packsInteract({
-//                     function: "transfer",
-//                     tokenId: "DOL",
-//                     to: user.address,
-//                     price: "1",
-//                 })
-//             )?.originalTxId;
-//
-//             console.log("interaction", txId);
-//         }
-//
-//         await warp.testing.mineBlock();
-//
-//         const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
-//         // console.log(JSON.stringify(erc1155State.tokens["DOL"], undefined, 2));
-//     } catch (e) {
-//         console.log("ERROR", e);
-//     }
-// }, 20_000);
-//
-//     // it("should activate the Fee contract on the Erc1155 one", async () => {
-//     //     await erc1155Interact({
-//     //         function: "configure",
-//     //         transferProxies: [feeTxId, op.address],
-//     //     });
-//     //
-//     //     const { state } = (await erc1155Contract.readState()).cachedValue;
-//     //     expect(state.settings.transferProxies).toEqual([feeTxId, op.address]);
-//     // });
-//     //
-//     // it("should attach fees to an NFT", async () => {
-//     //     const fees = {
-//     //         id: nftId,
-//     //         fees: {
-//     //             [op.address]: UNIT,
-//     //         },
-//     //         rate: UNIT * 0.1,
-//     //     };
-//     //
-//     //     await feeInteract({
-//     //         function: "createFee",
-//     //         ...fees,
-//     //         tokenId: nftId,
-//     //     });
-//     //
-//     //     const { state } = (await feeContract.readState()).cachedValue;
-//     //     expect(state.tokens[nftId]).toEqual(fees);
-//     // });
-//     //
-//     // it("should throw correct error type", async () => {
-//     //     let error;
-//     //
-//     //     try {
-//     //         await feeInteract({
-//     //             function: "transfer",
-//     //             tokenId: nftId,
-//     //             to: user.address,
-//     //             price: `${opBaseBalance + UNIT}`,
-//     //         });
-//     //     } catch (caughtError) {
-//     //         error = caughtError;
-//     //     }
-//     //
-//     //     const notEnoughBalanceError: FeeError = {
-//     //         kind: "Erc1155Error",
-//     //         data: {
-//     //             kind: "ContractError",
-//     //             data: {
-//     //                 kind: "CallerBalanceNotEnough",
-//     //                 data: opBaseBalance,
-//     //             },
-//     //         },
-//     //     };
-//     //
-//     //     expect(error).toEqual(notEnoughBalanceError);
-//     // });
-//     //
-//     // it("should sell the NFT and pay the shareholders", async () => {
-//     //     await feeInteract({
-//     //         function: "transfer",
-//     //         to: user.address,
-//     //         tokenId: nftId,
-//     //         price: `${nftPrice}`,
-//     //     });
-//     //
-//     //     const { state } = (await erc1155Contract.readState()).cachedValue;
-//     //     expect(state.tokens[nftId].balances[user.address]).toBe("1");
-//     //
-//     //     expect(state.tokens.DOL.balances[op.address]).toBe(`${opBaseBalance + nftPrice}`);
-//     //     expect(state.tokens.DOL.balances[user.address]).toBe(`${userBaseBalance - nftPrice}`);
-//     // });
-// });
