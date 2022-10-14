@@ -31,6 +31,7 @@ impl Actionable for Mint {
             .entry(token_id.clone())
             .or_insert(Token {
                 ticker: token_id.clone(),
+                tx_id: Some(Transaction::id()),
                 ..Default::default()
             })
             .balances

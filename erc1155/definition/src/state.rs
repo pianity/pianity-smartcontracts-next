@@ -51,6 +51,7 @@ pub type Approvals = HashMap<String, bool>;
 #[serde(rename_all = "camelCase")]
 pub struct Token {
     pub ticker: String,
+    pub tx_id: Option<String>,
     pub balances: Balances,
 }
 
