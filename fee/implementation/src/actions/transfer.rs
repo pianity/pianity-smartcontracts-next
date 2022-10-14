@@ -10,7 +10,7 @@ use warp_erc1155::{
 use warp_fee::{
     action::{ActionResult, CreateFee, HandlerResult, Transfer},
     error::ContractError,
-    state::{Fees, State, Token, UNIT},
+    state::{Fees, Nft, State, UNIT},
 };
 use wasm_bindgen::UnwrapThrowExt;
 
@@ -26,10 +26,10 @@ pub struct InternalWriteResult {
     result_type: String,
 }
 
-async fn get_token_owner(erc1155: &str, token_id: &str) -> Option<String> {
+async fn get_token_owner(erc1155: &str, nft_id: &str) -> Option<String> {
     let state = read_foreign_contract_state::<Erc1155State>(&erc1155.to_string()).await;
 
-    let token = state.tokens.get(token_id)?;
+    let token = state.tokens.get(nft_id)?;
 
     let owner = token.balances.iter().next().unwrap_throw();
 
@@ -43,13 +43,13 @@ impl AsyncActionable for Transfer {
             return Err(ContractError::TransferAmountMustBeHigherThanZero);
         }
 
-        let token = if let Some(token) = state.tokens.get_mut(&self.token_id) {
+        let token = if let Some(token) = state.nfts.get_mut(&self.nft_id) {
             token
         } else {
-            return Err(ContractError::TokenNotFound(self.token_id));
+            return Err(ContractError::TokenNotFound(self.nft_id));
         };
 
-        let token_owner = get_token_owner(&state.settings.erc1155, &self.token_id)
+        let token_owner = get_token_owner(&state.settings.erc1155, &self.nft_id)
             .await
             .ok_or(ContractError::TokenOwnerNotFound)?;
 
@@ -87,7 +87,7 @@ impl AsyncActionable for Transfer {
         transfers.push(Erc1155Action::Transfer {
             from: Some(token_owner),
             to: self.to.clone(),
-            token_id: self.token_id,
+            token_id: self.nft_id,
             qty: Balance::new(1),
         });
 

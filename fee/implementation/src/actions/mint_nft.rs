@@ -10,7 +10,7 @@ use warp_erc1155::{
 use warp_fee::{
     action::{ActionResult, CreateFee, HandlerResult, MintNft},
     error::ContractError,
-    state::{Fees, State, Token, UNIT},
+    state::{Fees, Nft, State, UNIT},
 };
 use wasm_bindgen::UnwrapThrowExt;
 
@@ -31,16 +31,6 @@ pub struct InternalWriteResult {
     result_type: String,
 }
 
-async fn get_token_owner(erc1155: &str, token_id: &str) -> Option<String> {
-    let state = read_foreign_contract_state::<Erc1155State>(&erc1155.to_string()).await;
-
-    let token = state.tokens.get(token_id)?;
-
-    let owner = token.balances.iter().next().unwrap_throw();
-
-    Some(owner.0.clone())
-}
-
 #[async_trait(?Send)]
 impl AsyncActionable for MintNft {
     async fn action(self, _caller: String, mut state: State) -> ActionResult {
@@ -54,15 +44,15 @@ impl AsyncActionable for MintNft {
         };
 
         for edition in 0..editions_count {
-            let prefix = format!("{}-{}", scarcity_name, edition + 1);
-            let token_id = format!(
+            let prefix = format!("{}-{}", edition + 1, scarcity_name);
+            let nft_id = format!(
                 "{}-{}",
                 prefix,
                 self.ticker.clone().unwrap_or_else(Transaction::id)
             );
 
             let create_fee = CreateFee {
-                token_id,
+                nft_id,
                 rate: self.rate,
                 fees: self.fees.clone(),
             };
@@ -70,7 +60,7 @@ impl AsyncActionable for MintNft {
             create_fee_internal(&create_fee, &mut state)?;
 
             mints.push(Erc1155Action::Action::Mint(Erc1155Action::Mint {
-                ticker: None,
+                ticker: self.ticker.clone(),
                 prefix: Some(prefix),
                 qty: Balance::new(1),
             }));

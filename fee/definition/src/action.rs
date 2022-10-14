@@ -10,14 +10,14 @@ use crate::state::{Fees, State};
 pub struct Transfer {
     // pub from: Option<String>,
     pub to: String,
-    pub token_id: String,
+    pub nft_id: String,
     pub price: Balance,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFee {
-    pub token_id: String,
+    pub nft_id: String,
     pub fees: Fees,
     pub rate: u32,
 }

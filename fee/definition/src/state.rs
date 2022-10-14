@@ -15,7 +15,7 @@ pub type Fees = HashMap<String, u32>;
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Token {
+pub struct Nft {
     pub id: String,
     pub fees: Fees,
     pub rate: u32,
@@ -67,7 +67,7 @@ pub struct State {
 
     pub settings: Settings,
 
-    pub tokens: HashMap<String, Token>,
+    pub nfts: HashMap<String, Nft>,
 
     pub evolve: Option<String>,
     pub can_evolve: Option<bool>,
