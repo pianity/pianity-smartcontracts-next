@@ -4,24 +4,10 @@ use warp_erc1155::action::{ActionResult, Burn, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::{Balance, State, Token};
 
-use crate::contract_utils::js_imports::Transaction;
+use crate::contract_utils::js_imports::{log, Transaction};
 use crate::utils::is_op;
 
 use super::Actionable;
-
-fn get_token_id(prefix: Option<String>, ticker: Option<String>) -> String {
-    let tx_id = Transaction::id();
-
-    let ticker = ticker.unwrap_or(tx_id);
-
-    let token_id = if let Some(prefix) = prefix {
-        format!("{}-{}", prefix, ticker)
-    } else {
-        ticker
-    };
-
-    token_id
-}
 
 impl Actionable for Burn {
     fn action(self, caller: String, mut state: State) -> ActionResult {
