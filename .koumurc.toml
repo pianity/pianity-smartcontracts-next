@@ -8,7 +8,7 @@ meta = "Anything about the project"
 docs = "Documentation"
 erc1155 = "Erc1155 contract package"
 fee = "Fee contract package"
-packs = "Packs contract pacakge"
+packs = "Packs contract package"
 tests = "Tests package"
 
 [kinds]
