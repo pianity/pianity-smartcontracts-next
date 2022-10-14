@@ -39,10 +39,6 @@ async fn get_token_owner(erc1155: &str, nft_id: &str) -> Option<String> {
 #[async_trait(?Send)]
 impl AsyncActionable for Transfer {
     async fn action(self, _caller: String, mut state: State) -> ActionResult {
-        if self.price.value == 0 {
-            return Err(ContractError::TransferAmountMustBeHigherThanZero);
-        }
-
         let token = if let Some(token) = state.nfts.get_mut(&self.nft_id) {
             token
         } else {
@@ -59,29 +55,31 @@ impl AsyncActionable for Transfer {
 
         let mut transfers: Vec<Erc1155Action::Transfer> = Vec::new();
 
-        // If this transfer is a resell, pay the NFT owner.
-        if is_resell {
-            transfers.push(Erc1155Action::Transfer {
-                from: Some(self.to.clone()),
-                to: token_owner.clone(),
-                token_id: state.settings.exchange_token.clone(),
-                qty: Balance::new(self.price.value * (rate / UNIT)),
+        if self.price.value > 0 {
+            // If this transfer is a resell, pay the NFT owner.
+            if is_resell {
+                transfers.push(Erc1155Action::Transfer {
+                    from: Some(self.to.clone()),
+                    to: token_owner.clone(),
+                    token_id: state.settings.exchange_token.clone(),
+                    qty: Balance::new(self.price.value * (rate / UNIT)),
+                });
+            }
+
+            // Pay the share holders.
+            token.fees.iter().for_each(|(address, share)| {
+                let fee_amount = (self.price.value as f32
+                    * (*share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
+                    as u32;
+
+                transfers.push(Erc1155Action::Transfer {
+                    from: Some(self.to.clone()),
+                    to: address.clone(),
+                    token_id: state.settings.exchange_token.clone(),
+                    qty: Balance::new(fee_amount),
+                });
             });
         }
-
-        // Pay the share holders.
-        token.fees.iter().for_each(|(address, share)| {
-            let fee_amount = (self.price.value as f32
-                * (*share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
-                as u32;
-
-            transfers.push(Erc1155Action::Transfer {
-                from: Some(self.to.clone()),
-                to: address.clone(),
-                token_id: state.settings.exchange_token.clone(),
-                qty: Balance::new(fee_amount),
-            });
-        });
 
         // Transfer the NFT.
         transfers.push(Erc1155Action::Transfer {

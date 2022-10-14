@@ -125,6 +125,30 @@ it("should activate the Fee contract on the Erc1155 one", async () => {
     expect(state.settings.proxies).toEqual([feeTxId]);
 });
 
+it("should mint a free NFT and distribute it to a unknown address", async () => {
+    const nftName = "PANTERA";
+    const nftId = `1-UNIQUE-${nftName}`;
+    const unknwownAddress = "unknown-address-1243132423";
+
+    await feeInteract({
+        function: "mintNft",
+        scarcity: "unique",
+        fees: { [op.address]: 1_000_000 },
+        rate: 1_000_000,
+        ticker: nftName,
+    });
+
+    await feeInteract({
+        function: "transfer",
+        to: unknwownAddress,
+        nftId,
+        price: "0",
+    });
+
+    const { state } = (await erc1155Contract.readState()).cachedValue;
+    expect(state.tokens[nftId].balances[unknwownAddress]).toEqual("1");
+});
+
 it("should attach fees to an NFT", async () => {
     const fees = {
         id: nftId1,
@@ -164,7 +188,7 @@ it("should throw correct error type", async () => {
             kind: "ContractError",
             data: {
                 kind: "OwnerBalanceNotEnough",
-                data: op.address,
+                data: user.address,
             },
         },
     };
