@@ -1,4 +1,4 @@
-import { describe, it, expect, test, beforeAll, afterAll } from "@jest/globals";
+import { it, expect, test, beforeAll, afterAll } from "@jest/globals";
 import Arlocal from "arlocal";
 import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";

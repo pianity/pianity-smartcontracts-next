@@ -5,12 +5,13 @@ import { JWKInterface } from "arweave/node/lib/wallet";
 import { Contract, Warp, WriteInteractionOptions } from "warp-contracts";
 
 import { State as Erc1155State } from "erc1155/State";
+import { Action as Erc1155Action } from "erc1155/Action";
 import { State as FeeState } from "fee/State";
 import { State as PacksState } from "packs/State";
 
 export const UNIT = 1_000_000;
 
-type ContractName = "erc1155" | "fee" | "packs";
+type ContractName = "erc1155" | "fee" | "packs" | "test-multi-read";
 
 export async function deployContract<T extends ContractName>(
     warp: Warp,
@@ -22,6 +23,8 @@ export async function deployContract<T extends ContractName>(
         ? FeeState
         : T extends "packs"
         ? PacksState
+        : T extends "test-multi-read"
+        ? Record<string, never>
         : never,
 ) {
     const wasmDir = `../${contract}/implementation/pkg`;
@@ -43,8 +46,10 @@ export function createInteractor<ACTION>(
     warp: Warp,
     contract: Contract,
     defaultWallet: JWKInterface,
-    defaultOptions: WriteInteractionOptions = { strict: true },
+    defaultOptions: WriteInteractionOptions = {},
 ) {
+    defaultOptions = { strict: true, ...defaultOptions };
+
     return async (
         interaction: ACTION,
         options: { wallet?: JWKInterface } & WriteInteractionOptions = {},
@@ -60,7 +65,7 @@ export function createInteractor<ACTION>(
             ...options,
         });
 
-        await warp.testing.mineBlock();
+        // await warp.testing.mineBlock();
 
         return interactionResult;
     };
@@ -77,4 +82,13 @@ export async function generateWallet(): Promise<Wallet> {
         jwk,
         address,
     };
+}
+
+export function range(n: number): number[] {
+    return [...Array(n).keys()];
+}
+
+export function dbg<T>(args: T): T {
+    console.log(args);
+    return args;
 }
