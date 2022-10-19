@@ -23,14 +23,15 @@ pub struct Transfer {
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
-    pub super_owner: Option<String>,
-    pub owners: Option<Vec<String>>,
+    pub super_operators: Option<Vec<String>>,
+    pub operators: Option<Vec<String>>,
     pub proxies: Option<Vec<String>>,
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Mint {
+    // TODO: Ticker should be a shorter ID to display on exchanges
     pub ticker: Option<String>,
     pub prefix: Option<String>,
     pub qty: Balance,
