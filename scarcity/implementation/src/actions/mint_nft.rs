@@ -4,24 +4,17 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::{
     action::{self as Erc1155Action},
     error::ContractError as Erc1155ContractError,
-    state::{Balance, State as Erc1155State},
+    state::Balance,
 };
 
-use warp_fee::{
+use warp_scarcity::{
     action::{ActionResult, CreateFee, HandlerResult, MintNft},
     error::ContractError,
-    state::{Fees, Nft, State, UNIT},
+    state::State,
 };
-use wasm_bindgen::UnwrapThrowExt;
 
-use crate::contract_utils::{
-    foreign_call::read_foreign_contract_state,
-    js_imports::{log, Transaction},
-};
-use crate::{
-    actions::{Actionable, AsyncActionable},
-    contract_utils::foreign_call::write_foreign_contract,
-};
+use crate::contract_utils::js_imports::{log, Transaction};
+use crate::{actions::AsyncActionable, contract_utils::foreign_call::write_foreign_contract};
 
 use super::create_fee_internal;
 
@@ -37,10 +30,10 @@ impl AsyncActionable for MintNft {
         let mut mints = Vec::new();
 
         let (scarcity_name, editions_count) = match self.scarcity {
-            warp_fee::action::NftScarcity::Unique => ("UNIQUE", 1),
-            warp_fee::action::NftScarcity::Legendary => ("LEGENDARY", 10),
-            warp_fee::action::NftScarcity::Epic => ("EPIC", 100),
-            warp_fee::action::NftScarcity::Rare => ("RARE", 1000),
+            warp_scarcity::action::NftScarcity::Unique => ("UNIQUE", 1),
+            warp_scarcity::action::NftScarcity::Legendary => ("LEGENDARY", 10),
+            warp_scarcity::action::NftScarcity::Epic => ("EPIC", 100),
+            warp_scarcity::action::NftScarcity::Rare => ("RARE", 1000),
         };
 
         let nft_base_id = self.ticker.clone().unwrap_or_else(Transaction::id);

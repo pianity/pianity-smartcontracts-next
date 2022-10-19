@@ -1,6 +1,6 @@
-use warp_fee::action::{ActionResult, Evolve, HandlerResult};
-use warp_fee::error::ContractError;
-use warp_fee::state::State;
+use warp_scarcity::action::{ActionResult, Evolve, HandlerResult};
+use warp_scarcity::error::ContractError;
+use warp_scarcity::state::State;
 
 use crate::contract_utils::js_imports::Transaction;
 

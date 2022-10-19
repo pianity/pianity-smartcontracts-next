@@ -1,7 +1,7 @@
 use crate::contract_utils::js_imports::SmartWeave;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use warp_fee::error::ForeignWriteError;
+use warp_scarcity::error::ForeignWriteError;
 use wasm_bindgen::{JsValue, UnwrapThrowExt};
 
 use super::js_imports::log;

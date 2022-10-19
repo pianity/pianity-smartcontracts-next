@@ -22,7 +22,6 @@ import { Action as Erc1155Action } from "erc1155/Action";
 import { State as PacksState } from "packs/State";
 import { Action as PacksAction } from "packs/Action";
 import { ContractError as PacksError } from "packs/ContractError";
-import { ContractError as FeeError } from "fee/ContractError";
 
 import {
     UNIT,

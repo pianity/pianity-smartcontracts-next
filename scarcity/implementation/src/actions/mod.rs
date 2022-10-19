@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use warp_fee::{action::ActionResult, state::State};
+use warp_scarcity::{action::ActionResult, state::State};
 
 // pub mod approval;
 pub mod batch;

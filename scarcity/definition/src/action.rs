@@ -5,21 +5,38 @@ use warp_erc1155::state::Balance;
 use crate::error::ContractError;
 use crate::state::{Fees, State};
 
-#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Transfer {
-    // pub from: Option<String>,
-    pub to: String,
-    pub nft_id: String,
-    pub price: Balance,
-}
-
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFee {
     pub nft_base_id: String,
     pub fees: Fees,
     pub rate: u32,
+}
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NftScarcity {
+    Unique,
+    Legendary,
+    Epic,
+    Rare,
+}
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MintNft {
+    pub scarcity: NftScarcity,
+    pub ticker: Option<String>,
+    pub fees: Fees,
+    pub rate: u32,
+}
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Transfer {
+    pub to: String,
+    pub nft_id: String,
+    pub price: Balance,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
@@ -42,35 +59,17 @@ pub struct Batch {
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum NftScarcity {
-    Unique,
-    Legendary,
-    Epic,
-    Rare,
-}
-
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MintNft {
-    pub scarcity: NftScarcity,
-    pub ticker: Option<String>,
-    pub fees: Fees,
-    pub rate: u32,
-}
-
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
     CreateFee(CreateFee),
+
+    MintNft(MintNft),
 
     Transfer(Transfer),
 
     Configure(Configure),
 
     Evolve(Evolve),
-
-    MintNft(MintNft),
 
     Batch(Batch),
 }

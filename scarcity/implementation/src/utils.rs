@@ -1,4 +1,4 @@
-use warp_fee::state::State;
+use warp_scarcity::state::State;
 
 use crate::contract_utils::js_imports::log;
 

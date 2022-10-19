@@ -7,7 +7,7 @@ maxCommitLength = 72
 meta = "Anything about the project"
 docs = "Documentation"
 erc1155 = "Erc1155 contract package"
-fee = "Fee contract package"
+scarcity = "scarcity contract package"
 packs = "Packs contract package"
 tests = "Tests package"
 
