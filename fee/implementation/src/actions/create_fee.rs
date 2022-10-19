@@ -7,14 +7,13 @@ use warp_fee::{
     state::{Fees, Nft, State, UNIT},
 };
 
-use crate::actions::{Actionable, AsyncActionable};
 use crate::contract_utils::foreign_call::read_foreign_contract_state;
+use crate::{
+    actions::{Actionable, AsyncActionable},
+    utils::splited_nft_id,
+};
 
-// use crate::contract_utils::js_imports::Transaction;
-// use crate::error::ContractError;
-// use crate::state::{Fees, State, Token};
-
-use warp_erc1155::state::State as Erc1155State;
+use warp_erc1155::state::{State as Erc1155State, Token as Erc1155Token};
 
 pub fn create_fee_internal(create_fee: &CreateFee, state: &mut State) -> Result<(), ContractError> {
     if create_fee.rate > UNIT {
@@ -34,9 +33,9 @@ pub fn create_fee_internal(create_fee: &CreateFee, state: &mut State) -> Result<
     }
 
     state.nfts.insert(
-        create_fee.nft_id.clone(),
+        create_fee.nft_base_id.clone(),
         Nft {
-            id: create_fee.nft_id.clone(),
+            base_id: create_fee.nft_base_id.clone(),
             fees: create_fee.fees.clone(),
             rate: create_fee.rate,
         },
@@ -48,31 +47,30 @@ pub fn create_fee_internal(create_fee: &CreateFee, state: &mut State) -> Result<
 #[async_trait(?Send)]
 impl AsyncActionable for CreateFee {
     async fn action(self, _caller: String, mut state: State) -> ActionResult {
-        if state.nfts.contains_key(&self.nft_id) {
-            return Err(ContractError::TokenAlreadyExists(self.nft_id));
+        if state.nfts.contains_key(&self.nft_base_id) {
+            return Err(ContractError::TokenAlreadyExists(self.nft_base_id));
         }
 
         let erc1155: Erc1155State = read_foreign_contract_state(&state.settings.erc1155).await;
 
-        // Make sure the token is an NFT
-        if let Some(token) = erc1155.tokens.get(&self.nft_id) {
-            if token
-                .balances
-                .iter()
-                .map(|(_, balance)| balance.value)
-                .reduce(|sum, balance| sum + balance)
-                .unwrap_or(0)
-                != 1
-            {
-                return Err(ContractError::TokenIsNotAnNFT(self.nft_id));
-            }
-        } else {
-            return Err(ContractError::TokenNotFound(self.nft_id));
-        }
-
-        if !erc1155.tokens.contains_key(&self.nft_id) {
-            return Err(ContractError::TokenDoesNotExist(self.nft_id));
-        }
+        erc1155
+            .tokens
+            .iter()
+            // find all existing tokens attached to `nft_base_id`
+            .filter(|(id, _)| splited_nft_id(id).is_some())
+            // find whether at least one of these tokens isn't an nft
+            .find(|(_, token)| {
+                token
+                    .balances
+                    .iter()
+                    .map(|(_, balance)| balance.value)
+                    .reduce(|sum, balance| sum + balance)
+                    .unwrap_or(0)
+                    != 1
+            })
+            .map_or(Ok(()), |(id, _)| {
+                Err(ContractError::TokenIsNotAnNFT(id.to_string()))
+            })?;
 
         create_fee_internal(&self, &mut state)?;
 

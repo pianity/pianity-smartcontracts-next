@@ -41,4 +41,5 @@ pub enum ContractError {
     TransferResult(String),
 
     Erc1155Error(ForeignWriteError<warp_erc1155::error::ContractError>),
+    InvalidNftId(String),
 }

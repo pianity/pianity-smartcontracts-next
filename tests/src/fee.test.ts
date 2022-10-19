@@ -25,8 +25,10 @@ let feeContract: Contract<FeeState>;
 let feeTxId: string;
 let feeInteract: ReturnType<typeof createInteractor<FeeAction>>;
 
-const nftId1 = "NFT-0";
-const nftId2 = "NFT-1";
+const nft1BaseId = "NFT-0";
+const nft1Id = `1-UNIQUE-${nft1BaseId}`;
+const nft2BaseId = "NFT-1";
+const nft2Id = `1-UNIQUE-${nft2BaseId}`;
 
 const nftPrice = 10 * UNIT;
 const nftRate = 0.1 * UNIT;
@@ -60,17 +62,17 @@ beforeAll(async () => {
                     [user.address]: `${userBaseBalance}`,
                 },
             },
-            [nftId1]: {
+            [nft1Id]: {
+                ticker: nft1Id,
                 balances: {
                     [op.address]: "1",
                 },
-                ticker: nftId1,
             },
-            [nftId2]: {
+            [nft2Id]: {
+                ticker: nft2Id,
                 balances: {
                     [op.address]: "1",
                 },
-                ticker: nftId2,
             },
         },
         approvals: {
@@ -126,32 +128,32 @@ it("should activate the Fee contract on the Erc1155 one", async () => {
 });
 
 it("should mint a free NFT and distribute it to a unknown address", async () => {
-    const nftName = "PANTERA";
-    const nftId = `1-UNIQUE-${nftName}`;
-    const unknwownAddress = "unknown-address-1243132423";
+    const nftBaseId = "PANTERA";
+    const nftId = `1-UNIQUE-${nftBaseId}`;
+    const unknownAddress = "unknown-address-1243132423";
 
     await feeInteract({
         function: "mintNft",
         scarcity: "unique",
         fees: { [op.address]: 1_000_000 },
         rate: 1_000_000,
-        ticker: nftName,
+        ticker: nftBaseId,
     });
 
     await feeInteract({
         function: "transfer",
-        to: unknwownAddress,
+        to: unknownAddress,
         nftId,
         price: "0",
     });
 
     const { state } = (await erc1155Contract.readState()).cachedValue;
-    expect(state.tokens[nftId].balances[unknwownAddress]).toEqual("1");
+    expect(state.tokens[nftId].balances[unknownAddress]).toEqual("1");
 });
 
 it("should attach fees to an NFT", async () => {
-    const fees = {
-        id: nftId1,
+    const fees: FeeState["nfts"][0] = {
+        baseId: nft1BaseId,
         fees: {
             [op.address]: UNIT,
         },
@@ -161,11 +163,11 @@ it("should attach fees to an NFT", async () => {
     await feeInteract({
         function: "createFee",
         ...fees,
-        nftId: nftId1,
+        nftBaseId: nft1BaseId,
     });
 
     const { state } = (await feeContract.readState()).cachedValue;
-    expect(state.nfts[nftId1]).toEqual(fees);
+    expect(state.nfts[nft1BaseId]).toEqual(fees);
 });
 
 it("should throw correct error type", async () => {
@@ -174,7 +176,7 @@ it("should throw correct error type", async () => {
     try {
         await feeInteract({
             function: "transfer",
-            nftId: nftId1,
+            nftId: nft1Id,
             to: user.address,
             price: `${opBaseBalance + UNIT}`,
         });
@@ -200,18 +202,18 @@ it("op should sell the NFT and pay the shareholders", async () => {
     await feeInteract({
         function: "transfer",
         to: user.address,
-        nftId: nftId1,
+        nftId: nft1Id,
         price: `${nftPrice}`,
     });
 
     const { state } = (await erc1155Contract.readState()).cachedValue;
-    expect(state.tokens[nftId1].balances[user.address]).toBe("1");
+    expect(state.tokens[nft1Id].balances[user.address]).toBe("1");
     expect(state.tokens.DOL.balances[op.address]).toBe(`${opBaseBalance + nftPrice}`);
     expect(state.tokens.DOL.balances[user.address]).toBe(`${userBaseBalance - nftPrice}`);
 });
 
 it("should mint nft", async () => {
-    const txId = (
+    const nftBaseId = (
         await feeInteract({
             function: "mintNft",
             scarcity: "legendary",
@@ -222,18 +224,22 @@ it("should mint nft", async () => {
         })
     )?.originalTxId;
 
-    const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
-    const { state: feeState } = (await feeContract.readState()).cachedValue;
-
-    for (let i = 0; i < 10; i++) {
-        const tokenId = `${i + 1}-LEGENDARY-${txId}`;
-
-        expect(erc1155State.tokens[tokenId]).toBeDefined();
-        expect(feeState.nfts[tokenId]).toBeDefined();
+    expect(nftBaseId).toBeDefined();
+    if (!nftBaseId) {
+        throw new Error("No nftBaseId");
     }
 
-    expect(erc1155State.tokens[`11-LEGENDARY-${txId}`]).toBeUndefined();
-    expect(feeState.nfts[`11-LEGENDARY-${txId}`]).toBeUndefined();
+    const { state: feeState } = (await feeContract.readState()).cachedValue;
+    expect(feeState.nfts[nftBaseId]).toBeDefined();
+
+    const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
+
+    for (let i = 0; i < 10; i++) {
+        const nftId = `${i + 1}-LEGENDARY-${nftBaseId}`;
+        expect(erc1155State.tokens[nftId]).toBeDefined();
+    }
+
+    expect(erc1155State.tokens[`11-LEGENDARY-${nftBaseId}`]).toBeUndefined();
 });
 
 it("should mint with a custom ticker", async () => {
@@ -249,16 +255,19 @@ it("should mint with a custom ticker", async () => {
         ticker,
     });
 
-    const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
     const { state: feeState } = (await feeContract.readState()).cachedValue;
+    expect(feeState.nfts[ticker]).toBeDefined();
+
+    const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
 
     for (let i = 0; i < 10; i++) {
         const tokenId = `${i + 1}-LEGENDARY-${ticker}`;
 
         expect(erc1155State.tokens[tokenId]).toBeDefined();
-        expect(feeState.nfts[tokenId]).toBeDefined();
     }
 
     expect(erc1155State.tokens[`11-LEGENDARY-${ticker}`]).toBeUndefined();
-    expect(feeState.nfts[`11-LEGENDARY-${ticker}`]).toBeUndefined();
 });
+
+// TODO: Test the case where user buys an NFT that doesn't have an edition count of 1, 10, 100 or
+// 1000. (there is an NFT with 50 editions in the old contract).

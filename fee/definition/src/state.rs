@@ -16,7 +16,7 @@ pub type Fees = HashMap<String, u32>;
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Nft {
-    pub id: String,
+    pub base_id: String,
     pub fees: Fees,
     pub rate: u32,
     // NOTE: The following will only be necessary when artists will be allowed to mint instead of

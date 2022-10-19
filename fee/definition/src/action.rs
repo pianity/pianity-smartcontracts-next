@@ -17,7 +17,7 @@ pub struct Transfer {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFee {
-    pub nft_id: String,
+    pub nft_base_id: String,
     pub fees: Fees,
     pub rate: u32,
 }

@@ -43,24 +43,22 @@ impl AsyncActionable for MintNft {
             warp_fee::action::NftScarcity::Rare => ("RARE", 1000),
         };
 
-        for edition in 0..editions_count {
-            let prefix = format!("{}-{}", edition + 1, scarcity_name);
-            let nft_id = format!(
-                "{}-{}",
-                prefix,
-                self.ticker.clone().unwrap_or_else(Transaction::id)
-            );
+        let nft_base_id = self.ticker.clone().unwrap_or_else(Transaction::id);
 
-            let create_fee = CreateFee {
-                nft_id,
+        create_fee_internal(
+            &CreateFee {
+                nft_base_id: nft_base_id.clone(),
                 rate: self.rate,
                 fees: self.fees.clone(),
-            };
+            },
+            &mut state,
+        )?;
 
-            create_fee_internal(&create_fee, &mut state)?;
+        for edition in 0..editions_count {
+            let prefix = format!("{}-{}", edition + 1, scarcity_name);
 
             mints.push(Erc1155Action::Action::Mint(Erc1155Action::Mint {
-                ticker: self.ticker.clone(),
+                ticker: Some(nft_base_id.clone()),
                 prefix: Some(prefix),
                 qty: Balance::new(1),
             }));
