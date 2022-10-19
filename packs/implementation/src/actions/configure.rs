@@ -4,21 +4,24 @@ use warp_packs::{
     state::State,
 };
 
-use crate::actions::Actionable;
+use crate::{
+    actions::Actionable,
+    utils::{is_op, is_super_op},
+};
 
 impl Actionable for Configure {
     fn action(self, caller: String, mut state: State) -> ActionResult {
-        if self.super_operator.is_some() && caller != state.settings.super_operator
-            || self.operators.is_some()
-                && caller != state.settings.super_operator
-                && (caller != state.settings.super_operator
-                    && state.settings.operators.contains(&caller))
+        let is_super_op = is_super_op(&state, &caller);
+        let is_op = is_op(&state, &caller);
+
+        if self.super_operators.is_some() && !is_super_op
+            || self.operators.is_some() && !is_super_op && (!is_super_op && is_op)
         {
             return Err(ContractError::UnauthorizedConfiguration);
         }
 
-        if let Some(super_operator) = self.super_operator {
-            state.settings.super_operator = super_operator;
+        if let Some(super_operators) = self.super_operators {
+            state.settings.super_operators = super_operators;
         }
 
         if let Some(operators) = self.operators {
