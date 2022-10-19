@@ -79,7 +79,7 @@ beforeAll(async () => {
     const erc1155InitState: Erc1155State = {
         name: "TEST-ERC1155",
         settings: {
-            superOperator: op.address,
+            superOperators: [op.address],
             operators: [],
             proxies: [],
             allowFreeTransfer: true,

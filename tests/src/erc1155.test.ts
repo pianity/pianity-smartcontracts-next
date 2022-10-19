@@ -29,10 +29,10 @@ beforeAll(async () => {
     op = await warp.testing.generateWallet();
     user = await warp.testing.generateWallet();
 
-    const initState = {
+    const initState: State = {
         name: "TEST-ERC1155",
         settings: {
-            superOperator: op.address,
+            superOperators: [op.address],
             operators: [],
             proxies: [],
             allowFreeTransfer: true,
