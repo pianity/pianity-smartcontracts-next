@@ -1,14 +1,11 @@
 use warp_fee::state::State;
 
-use crate::contract_utils::js_imports::log;
-
 pub fn is_op(state: &State, address: &str) -> bool {
-    address == state.settings.super_operator
-        || state.settings.operators.iter().any(|op| op == address)
+    is_super_op(state, address) || state.settings.operators.contains(&address.into())
 }
 
 pub fn is_super_op(state: &State, address: &str) -> bool {
-    address == state.settings.super_operator
+    state.settings.super_operators.contains(&address.into())
 }
 
 fn is_prefix_valid(edition: &str, scarcity: &str) -> bool {

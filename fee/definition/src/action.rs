@@ -25,7 +25,7 @@ pub struct CreateFee {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
-    pub super_operator: Option<String>,
+    pub super_operators: Option<Vec<String>>,
     pub operators: Option<Vec<String>>,
 }
 
