@@ -19,9 +19,9 @@ import { JWKInterface } from "arweave/node/lib/wallet";
 
 import { State as Erc1155State } from "erc1155/State";
 import { Action as Erc1155Action } from "erc1155/Action";
-import { State as PacksState } from "packs/State";
-import { Action as PacksAction } from "packs/Action";
-import { ContractError as PacksError } from "packs/ContractError";
+import { State as ShuffleState } from "shuffle/State";
+import { Action as ShuffleAction } from "shuffle/Action";
+import { ContractError as ShuffleError } from "shuffle/ContractError";
 import { ContractError as FeeError } from "fee/ContractError";
 
 import {
@@ -44,9 +44,9 @@ let erc1155Contract: Contract<Erc1155State>;
 let erc1155TxId: string;
 let erc1155Interact: ReturnType<typeof createInteractor<Erc1155Action>>;
 
-let packsContract: Contract<PacksState>;
-let packsTxId: string;
-let packsInteract: ReturnType<typeof createInteractor<PacksAction>>;
+let shuffleContract: Contract<ShuffleState>;
+let shuffleTxId: string;
+let shuffleInteract: ReturnType<typeof createInteractor<ShuffleAction>>;
 
 const nftPrice = 10 * UNIT;
 const nftRate = 0.1 * UNIT;
@@ -69,7 +69,7 @@ beforeAll(async () => {
     // LoggerFactory.INST.logLevel("debug", "WASM:Rust");
     // LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
-    arlocal = new Arlocal(1986, false, `./arlocal.packs.db`, false);
+    arlocal = new Arlocal(1986, false, `./arlocal.shuffle.db`, false);
     await arlocal.start();
 
     warp = WarpFactory.forLocal(1986, undefined, { inMemory: true, dbLocation: "/dev/null" });
@@ -125,8 +125,8 @@ beforeAll(async () => {
         .connect(op.jwk);
     erc1155Interact = createInteractor<Erc1155Action>(warp, erc1155Contract, op.jwk);
 
-    const packsInitState: PacksState = {
-        name: "TEST-PACKS",
+    const shuffleInitState: ShuffleState = {
+        name: "TEST-SHUFFLES",
         settings: {
             superOperator: op.address,
             operators: [],
@@ -134,24 +134,24 @@ beforeAll(async () => {
             custodian: op.address,
             exchangeToken: "DOL",
         },
-        packs: {},
+        shuffles: {},
     };
 
-    packsTxId = (await deployContract(warp, op.jwk, "packs", packsInitState)).contractTxId;
-    packsContract = warp
-        .contract<PacksState>(packsTxId)
+    shuffleTxId = (await deployContract(warp, op.jwk, "shuffle", shuffleInitState)).contractTxId;
+    shuffleContract = warp
+        .contract<ShuffleState>(shuffleTxId)
         .setEvaluationOptions({
             internalWrites: true,
             throwOnInternalWriteError: true,
             ignoreExceptions: false,
         })
         .connect(op.jwk);
-    packsInteract = createInteractor<PacksAction>(warp, packsContract, op.jwk, {
+    shuffleInteract = createInteractor<ShuffleAction>(warp, shuffleContract, op.jwk, {
         vrf: true,
     });
 
     console.log(
-        `OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${erc1155TxId}\nPACKS: ${packsTxId}`,
+        `OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${erc1155TxId}\nSHUFFLE: ${shuffleTxId}`,
     );
 }, 20_000);
 
@@ -159,29 +159,29 @@ afterAll(async () => {
     // await arlocal.stop();
 });
 
-it("should enable PACKS as a proxy to ERC1155", async () => {
+it("should enable SHUFFLES as a proxy to ERC1155", async () => {
     await erc1155Interact({
         function: "configure",
-        proxies: [packsTxId],
+        proxies: [shuffleTxId],
     });
 
     const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
-    expect(erc1155State.settings.proxies).toEqual([packsTxId]);
+    expect(erc1155State.settings.proxies).toEqual([shuffleTxId]);
 });
 
-it("should mint a pack", async () => {
+it("should mint a shuffle", async () => {
     const txId = (
-        await packsInteract({
-            function: "mintPack",
+        await shuffleInteract({
+            function: "mintShuffle",
             nfts: { legendary: ["UNIQUE-NFT", "LEGENDARY-NFT"] },
         })
     )?.originalTxId;
 
     const { state } = (await erc1155Contract.readState()).cachedValue;
-    expect(state.tokens[`PACK-${txId}`]).toBeDefined();
+    expect(state.tokens[`SHUFFLE-${txId}`]).toBeDefined();
 }, 10_000);
 
-it("should throw when minting a pack for the same nfts twice", async () => {
+it("should throw when minting a shuffle for the same nfts twice", async () => {
     const uniqueTicker = "UNIQUE_WHALE_NFT";
     const legendaryTicker = "LEGENDARY_WHALE_NFT";
     await erc1155Interact({
@@ -189,22 +189,22 @@ it("should throw when minting a pack for the same nfts twice", async () => {
         actions: mintNfts([uniqueTicker, legendaryTicker]),
     });
 
-    const packTicker = "WHALE";
-    const expectedError: PacksError = {
-        kind: "NftAlreadyPacked",
-        data: [`PACK-${packTicker}`, uniqueTicker],
+    const shuffleTicker = "WHALE";
+    const expectedError: ShuffleError = {
+        kind: "NftAlreadyInAShuffle",
+        data: [`SHUFFLE-${shuffleTicker}`, uniqueTicker],
     };
     await expect(
-        packsInteract({
+        shuffleInteract({
             function: "batch",
             actions: [
                 {
-                    function: "mintPack",
+                    function: "mintShuffle",
                     nfts: { legendary: [uniqueTicker, legendaryTicker] },
-                    ticker: packTicker,
+                    ticker: shuffleTicker,
                 },
                 {
-                    function: "mintPack",
+                    function: "mintShuffle",
                     nfts: { legendary: [uniqueTicker, legendaryTicker] },
                 },
             ],
@@ -212,7 +212,7 @@ it("should throw when minting a pack for the same nfts twice", async () => {
     ).rejects.toEqual(expectedError);
 }, 10_000);
 
-it("should mint packs and open all of them", async () => {
+it("should mint shuffles and open all of them", async () => {
     const uniqueTicker = "UNIQUE_FISH_NFT";
     const legendaryTicker = "LEGENDARY_FISH_NFT";
     await erc1155Interact({
@@ -220,10 +220,10 @@ it("should mint packs and open all of them", async () => {
         actions: mintNfts([uniqueTicker, legendaryTicker]),
     });
 
-    const packTicker = "FISH";
-    await packsInteract({
-        function: "mintPack",
-        ticker: packTicker,
+    const shuffleTicker = "FISH";
+    await shuffleInteract({
+        function: "mintShuffle",
+        ticker: shuffleTicker,
         nfts: { legendary: [uniqueTicker, legendaryTicker] },
     });
 
@@ -233,34 +233,34 @@ it("should mint packs and open all of them", async () => {
             {
                 function: "mint",
                 qty: "1",
-                ticker: `PACK-${packTicker}`,
+                ticker: `SHUFFLE-${shuffleTicker}`,
             },
             {
                 function: "transfer",
                 qty: "12",
-                tokenId: `PACK-${packTicker}`,
+                tokenId: `SHUFFLE-${shuffleTicker}`,
                 to: user.address,
             },
         ],
     });
 
     for (let i = 0; i < 11; i++) {
-        await packsInteract({
-            function: "openPack",
-            packId: `PACK-${packTicker}`,
+        await shuffleInteract({
+            function: "openShuffle",
+            shuffleId: `SHUFFLE-${shuffleTicker}`,
             owner: user.address,
         });
     }
 
-    const noNftAvailable: PacksError = {
+    const noNftAvailable: ShuffleError = {
         kind: "NoNftAvailable",
-        data: `PACK-${packTicker}`,
+        data: `SHUFFLE-${shuffleTicker}`,
     };
 
     await expect(
-        packsInteract({
-            function: "openPack",
-            packId: `PACK-${packTicker}`,
+        shuffleInteract({
+            function: "openShuffle",
+            shuffleId: `SHUFFLE-${shuffleTicker}`,
             owner: user.address,
         }),
     ).rejects.toEqual(noNftAvailable);

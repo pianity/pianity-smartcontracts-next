@@ -1,7 +1,7 @@
 {
-    "name": "warp-packs",
+    "name": "warp-shuffle",
     "version": "0.0.1",
-    "description": "Rust implementation of the PACKS contract",
+    "description": "Rust implementation of Pianity's SHUFFLE contract",
     "main": "index.js",
     "author": "Eyal Chojnowski <eyal@pianity.com>",
     "license": "MIT",

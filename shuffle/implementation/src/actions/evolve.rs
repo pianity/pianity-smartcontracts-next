@@ -1,6 +1,6 @@
-use warp_packs::action::{ActionResult, Evolve, HandlerResult};
-use warp_packs::error::ContractError;
-use warp_packs::state::State;
+use warp_shuffle::action::{ActionResult, Evolve, HandlerResult};
+use warp_shuffle::error::ContractError;
+use warp_shuffle::state::State;
 
 use crate::utils::is_super_op;
 

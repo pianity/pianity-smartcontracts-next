@@ -1,10 +1,10 @@
-use warp_packs::state::{PackScarcity, State};
+use warp_shuffle::state::{ShuffleScarcity, State};
 
 fn index_to_editions_count(n: usize) -> u32 {
     (0..n).fold(1, |acc, _| acc * 10)
 }
 
-pub fn get_all_nfts_ids(nfts: &PackScarcity) -> Vec<String> {
+pub fn get_all_nfts_ids(nfts: &ShuffleScarcity) -> Vec<String> {
     Vec::from(nfts)
         .iter()
         .enumerate()

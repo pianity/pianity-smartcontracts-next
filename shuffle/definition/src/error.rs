@@ -50,9 +50,9 @@ pub enum ContractError {
     Erc1155Error(ForeignWriteError<warp_erc1155::error::ContractError>),
     Erc1155ReadFailed,
 
-    PackNotFound(String),
-    /// (pack_id, nft_id)
-    NftAlreadyPacked(String, String),
-    /// (pack_id)
+    ShuffleNotFound(String),
+    /// (shuffle_id, nft_id)
+    NftAlreadyInAShuffle(String, String),
+    /// (shuffle_id)
     NoNftAvailable(String),
 }

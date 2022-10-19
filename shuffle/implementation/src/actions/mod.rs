@@ -1,18 +1,18 @@
 use async_trait::async_trait;
 
-use warp_packs::{action::ActionResult, state::State};
+use warp_shuffle::{action::ActionResult, state::State};
 
 pub mod batch;
 pub mod configure;
 pub mod evolve;
-pub mod mint_pack;
-pub mod open_pack;
+pub mod mint_shuffle;
+pub mod open_shuffle;
 
 pub use batch::*;
 pub use configure::*;
 pub use evolve::*;
-pub use mint_pack::*;
-pub use open_pack::*;
+pub use mint_shuffle::*;
+pub use open_shuffle::*;
 
 pub trait Actionable {
     fn action(self, caller: String, state: State) -> ActionResult;

@@ -2,7 +2,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use wasm_bindgen::JsValue;
 
-use warp_packs::error::{ForeignReadError, ForeignWriteError};
+use warp_shuffle::error::{ForeignReadError, ForeignWriteError};
 
 use crate::contract_utils::js_imports::SmartWeave;
 

@@ -9,10 +9,10 @@ use warp_erc1155::{
     state::{Balance, State as Erc1155State},
 };
 
-use warp_packs::{
-    action::{ActionResult, HandlerResult, MintPack},
+use warp_shuffle::{
+    action::{ActionResult, HandlerResult, MintShuffle},
     error::ContractError,
-    state::{Pack, PackScarcity, State},
+    state::{Shuffle, ShuffleScarcity, State},
 };
 
 use crate::{actions::AsyncActionable, contract_utils::foreign_call::write_foreign_contract};
@@ -30,16 +30,16 @@ pub struct InternalWriteResult {
 
 async fn verify_nfts(
     erc1155: &String,
-    nfts: &PackScarcity,
-    all_packs: &HashMap<String, Pack>,
+    nfts: &ShuffleScarcity,
+    all_shuffles: &HashMap<String, Shuffle>,
 ) -> Result<(), ContractError> {
     let nfts_vec: Vec<String> = nfts.into();
 
-    for (pack_id, pack) in all_packs.iter() {
+    for (shuffle_id, shuffle) in all_shuffles.iter() {
         for nft in &nfts_vec {
-            if Vec::from(&pack.nfts).contains(&nft) {
-                return Err(ContractError::NftAlreadyPacked(
-                    pack_id.clone(),
+            if Vec::from(&shuffle.nfts).contains(&nft) {
+                return Err(ContractError::NftAlreadyInAShuffle(
+                    shuffle_id.clone(),
                     nft.clone(),
                 ));
             }
@@ -61,27 +61,27 @@ async fn verify_nfts(
 }
 
 #[async_trait(?Send)]
-impl AsyncActionable for MintPack {
+impl AsyncActionable for MintShuffle {
     async fn action(self, _caller: String, mut state: State) -> ActionResult {
-        verify_nfts(&state.settings.erc1155, &self.nfts, &state.packs).await?;
+        verify_nfts(&state.settings.erc1155, &self.nfts, &state.shuffles).await?;
 
         let total_editions = match &self.nfts {
-            PackScarcity::Legendary(_) => 11,
-            PackScarcity::Epic(_) => 111,
-            PackScarcity::Rare(_) => 1111,
+            ShuffleScarcity::Legendary(_) => 11,
+            ShuffleScarcity::Epic(_) => 111,
+            ShuffleScarcity::Rare(_) => 1111,
         };
 
-        let prefix = "PACK";
-        let pack_id = format!(
+        let prefix = "SHUFFLE";
+        let shuffle_id = format!(
             "{}-{}",
             prefix,
             self.ticker.clone().unwrap_or_else(Transaction::id)
         );
 
-        state.packs.insert(
-            pack_id.clone(),
-            Pack {
-                id: pack_id,
+        state.shuffles.insert(
+            shuffle_id.clone(),
+            Shuffle {
+                id: shuffle_id,
                 nfts: self.nfts,
             },
         );

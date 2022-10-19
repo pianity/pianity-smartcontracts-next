@@ -9,10 +9,10 @@ use warp_erc1155::{
     state::{Balance, State as Erc1155State, Token as Erc1155Token},
 };
 
-use warp_packs::{
-    action::{ActionResult, HandlerResult, OpenPack},
+use warp_shuffle::{
+    action::{ActionResult, HandlerResult, OpenShuffle},
     error::ContractError,
-    state::{PackScarcity, State},
+    state::{ShuffleScarcity, State},
 };
 
 use crate::{actions::AsyncActionable, contract_utils::foreign_call::write_foreign_contract};
@@ -37,17 +37,17 @@ fn is_nft_available(
 ) -> bool {
     tokens
         .get(nft_id)
-        .unwrap() // NFT existence is checked in `mint_pack` action
+        .unwrap() // NFT existence is checked in `mint_shuffle` action
         .balances
         .iter()
         .next()
-        .unwrap() // NFT having only one balance is checked in `mint_pack` action
+        .unwrap() // NFT having only one balance is checked in `mint_shuffle` action
         .0
         == custodian
 }
 
 fn get_available_nfts(
-    nfts: &PackScarcity,
+    nfts: &ShuffleScarcity,
     tokens: &HashMap<String, Erc1155Token>,
     custodian: &String,
 ) -> Vec<String> {
@@ -58,14 +58,14 @@ fn get_available_nfts(
 }
 
 #[async_trait(?Send)]
-impl AsyncActionable for OpenPack {
+impl AsyncActionable for OpenShuffle {
     async fn action(self, caller: String, state: State) -> ActionResult {
         let owner = self.owner.unwrap_or_else(|| caller.clone());
 
-        let pack = state
-            .packs
-            .get(&self.pack_id)
-            .ok_or_else(|| ContractError::PackNotFound(self.pack_id.clone()))?;
+        let shuffle = state
+            .shuffles
+            .get(&self.shuffle_id)
+            .ok_or_else(|| ContractError::ShuffleNotFound(self.shuffle_id.clone()))?;
 
         let erc1155_state = read_foreign_contract_state::<Erc1155State>(&state.settings.erc1155)
             .await
@@ -73,8 +73,8 @@ impl AsyncActionable for OpenPack {
 
         let owner_balance = erc1155_state
             .tokens
-            .get(&self.pack_id)
-            .ok_or(ContractError::TokenNotFound(self.pack_id.clone()))?
+            .get(&self.shuffle_id)
+            .ok_or(ContractError::TokenNotFound(self.shuffle_id.clone()))?
             .balances
             .get(&owner)
             .map_or(0, |balance| balance.value);
@@ -84,11 +84,14 @@ impl AsyncActionable for OpenPack {
             return Err(ContractError::CallerBalanceNotEnough(0));
         }
 
-        let nfts: Vec<String> =
-            get_available_nfts(&pack.nfts, &erc1155_state.tokens, &state.settings.custodian);
+        let nfts: Vec<String> = get_available_nfts(
+            &shuffle.nfts,
+            &erc1155_state.tokens,
+            &state.settings.custodian,
+        );
 
         let nft_i = match nfts.len() {
-            0 => return Err(ContractError::NoNftAvailable(self.pack_id.clone())),
+            0 => return Err(ContractError::NoNftAvailable(self.shuffle_id.clone())),
             1 => 0,
             len => Vrf::random_int((len - 1) as i32),
         };
@@ -96,7 +99,7 @@ impl AsyncActionable for OpenPack {
         let nft = nfts.get(nft_i as usize).unwrap();
 
         let burn = Erc1155Action::Action::Burn(Erc1155Action::Burn {
-            token_id: self.pack_id,
+            token_id: self.shuffle_id,
             owner: Some(owner.clone()),
             qty: Balance::new(1),
         });

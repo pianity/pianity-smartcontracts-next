@@ -8,9 +8,9 @@ use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::contract;
-use warp_packs::action::{Action, HandlerResult};
-use warp_packs::error::ContractError;
-use warp_packs::state::State;
+use warp_shuffle::action::{Action, HandlerResult};
+use warp_shuffle::error::ContractError;
+use warp_shuffle::state::State;
 
 /*
 Note: in order do optimize communication between host and the WASM module,

@@ -16,7 +16,7 @@
             "@/*": ["./src/*"],
             "erc1155/*": ["../erc1155/definition/bindings/ts/*"],
             "fee/*": ["../fee/definition/bindings/ts/*"],
-            "packs/*": ["../packs/definition/bindings/ts/*"],
+            "shuffle/*": ["../shuffle/definition/bindings/ts/*"],
             "tsconfig": ["./tsconfig.json"]
         }
     },

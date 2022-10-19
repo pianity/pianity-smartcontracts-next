@@ -1,5 +1,5 @@
 [package]
-name = "warp-packs"
+name = "warp-shuffle"
 version = "0.1.0"
 authors = ["Eyal Chojnowski <eyal@pianity.com>"]
 edition = "2021"

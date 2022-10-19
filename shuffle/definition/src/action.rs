@@ -2,19 +2,19 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ContractError;
-use crate::state::{PackScarcity, State};
+use crate::state::{ShuffleScarcity, State};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MintPack {
-    pub nfts: PackScarcity,
+pub struct MintShuffle {
+    pub nfts: ShuffleScarcity,
     pub ticker: Option<String>,
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OpenPack {
-    pub pack_id: String,
+pub struct OpenShuffle {
+    pub shuffle_id: String,
     pub owner: Option<String>,
 }
 
@@ -40,8 +40,8 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
-    MintPack(MintPack),
-    OpenPack(OpenPack),
+    MintShuffle(MintShuffle),
+    OpenShuffle(OpenShuffle),
     Configure(Configure),
     Evolve(Evolve),
     Batch(Batch),

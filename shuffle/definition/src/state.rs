@@ -5,29 +5,29 @@ use serde::{Deserialize, Serialize};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum PackScarcity {
+pub enum ShuffleScarcity {
     Legendary([String; 2]),
     Epic([String; 3]),
     Rare([String; 4]),
 }
 
-impl Default for PackScarcity {
+impl Default for ShuffleScarcity {
     fn default() -> Self {
         Self::Legendary(["1".to_string(), "2".to_string()])
     }
 }
 
-impl From<&PackScarcity> for Vec<String> {
-    fn from(item: &PackScarcity) -> Self {
+impl From<&ShuffleScarcity> for Vec<String> {
+    fn from(item: &ShuffleScarcity) -> Self {
         match item {
-            PackScarcity::Legendary(nfts) => nfts.to_vec(),
-            PackScarcity::Epic(nfts) => nfts.to_vec(),
-            PackScarcity::Rare(nfts) => nfts.to_vec(),
+            ShuffleScarcity::Legendary(nfts) => nfts.to_vec(),
+            ShuffleScarcity::Epic(nfts) => nfts.to_vec(),
+            ShuffleScarcity::Rare(nfts) => nfts.to_vec(),
         }
     }
 }
 
-impl<'a> IntoIterator for &'a PackScarcity {
+impl<'a> IntoIterator for &'a ShuffleScarcity {
     type Item = String;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -38,9 +38,9 @@ impl<'a> IntoIterator for &'a PackScarcity {
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Pack {
+pub struct Shuffle {
     pub id: String,
-    pub nfts: PackScarcity,
+    pub nfts: ShuffleScarcity,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
@@ -71,7 +71,7 @@ pub struct State {
 
     pub settings: Settings,
 
-    pub packs: HashMap<String, Pack>,
+    pub shuffles: HashMap<String, Shuffle>,
 
     pub evolve: Option<String>,
     pub can_evolve: Option<bool>,

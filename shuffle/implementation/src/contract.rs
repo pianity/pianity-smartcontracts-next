@@ -1,6 +1,6 @@
 use async_recursion::async_recursion;
 
-use warp_packs::{
+use warp_shuffle::{
     action::{Action, ActionResult},
     error::ContractError,
     state::State,
@@ -23,8 +23,8 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
     }
 
     match action {
-        Action::MintPack(action) => action.action(direct_caller, state).await,
-        Action::OpenPack(action) => action.action(direct_caller, state).await,
+        Action::MintShuffle(action) => action.action(direct_caller, state).await,
+        Action::OpenShuffle(action) => action.action(direct_caller, state).await,
         Action::Configure(action) => action.action(direct_caller, state),
         Action::Evolve(action) => action.action(direct_caller, state),
         Action::Batch(action) => action.action(direct_caller, state).await,

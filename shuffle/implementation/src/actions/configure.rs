@@ -1,4 +1,4 @@
-use warp_packs::{
+use warp_shuffle::{
     action::{ActionResult, Configure, HandlerResult},
     error::ContractError,
     state::State,

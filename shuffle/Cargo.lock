@@ -293,7 +293,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "warp-packs"
+name = "warp-shuffle"
 version = "0.1.0"
 dependencies = [
  "schemars",
@@ -303,7 +303,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "warp-packs-implementation"
+name = "warp-shuffle-implementation"
 version = "0.1.0"
 dependencies = [
  "async-recursion",
@@ -313,7 +313,7 @@ dependencies = [
  "serde_json",
  "tokio-test",
  "warp-erc1155",
- "warp-packs",
+ "warp-shuffle",
  "wasm-bindgen",
  "wasm-bindgen-futures",
 ]
