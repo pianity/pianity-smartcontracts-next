@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use warp_fee::{
+use warp_scarcity::{
     action::{ActionResult, CreateFee, HandlerResult},
     error::ContractError,
     state::{Fees, Nft, State, UNIT},

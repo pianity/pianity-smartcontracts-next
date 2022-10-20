@@ -11,7 +11,7 @@
 A generic implementation of the Erc1155 contract, featuring a way to proxy its Transfer action
 through another contract.
 
-### Fee
+### Scarcity
 
 A proxy contract that plugs on the Erc1155 used for managing NFT sellings, enabling a royalty-like
 system.

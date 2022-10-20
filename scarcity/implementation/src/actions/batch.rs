@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use warp_fee::{
+use warp_scarcity::{
     action::{Action, ActionResult, Batch, HandlerResult, ReadResponse},
     error::ContractError,
     state::State,

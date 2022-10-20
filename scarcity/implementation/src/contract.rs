@@ -1,6 +1,6 @@
 use async_recursion::async_recursion;
 
-use warp_fee::{
+use warp_scarcity::{
     action::{Action, ActionResult},
     error::ContractError,
     state::State,

@@ -8,9 +8,9 @@ use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::contract;
-use warp_fee::action::{Action, HandlerResult};
-use warp_fee::error::ContractError;
-use warp_fee::state::State;
+use warp_scarcity::action::{Action, HandlerResult};
+use warp_scarcity::error::ContractError;
+use warp_scarcity::state::State;
 
 /*
 Note: in order do optimize communication between host and the WASM module,

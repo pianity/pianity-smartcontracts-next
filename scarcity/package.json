@@ -1,7 +1,7 @@
 {
-    "name": "warp-fee",
+    "name": "warp-scarcity",
     "version": "0.0.1",
-    "description": "Rust implementation of the FEE contract standard",
+    "description": "Rust implementation of Pianity's SCARCITY contract",
     "main": "index.js",
     "author": "Eyal Chojnowski <eyal@pianity.com>",
     "license": "MIT",

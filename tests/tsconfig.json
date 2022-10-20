@@ -15,7 +15,7 @@
         "paths": {
             "@/*": ["./src/*"],
             "erc1155/*": ["../erc1155/definition/bindings/ts/*"],
-            "fee/*": ["../fee/definition/bindings/ts/*"],
+            "scarcity/*": ["../scarcity/definition/bindings/ts/*"],
             "shuffle/*": ["../shuffle/definition/bindings/ts/*"],
             "tsconfig": ["./tsconfig.json"]
         }

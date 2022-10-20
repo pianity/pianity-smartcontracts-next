@@ -1,4 +1,4 @@
-use warp_fee::{
+use warp_scarcity::{
     action::{ActionResult, Configure, HandlerResult},
     error::ContractError,
     state::State,

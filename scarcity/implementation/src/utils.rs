@@ -1,4 +1,4 @@
-use warp_fee::state::State;
+use warp_scarcity::state::State;
 
 pub fn is_op(state: &State, address: &str) -> bool {
     is_super_op(state, address) || state.settings.operators.contains(&address.into())

@@ -6,12 +6,12 @@ import { Contract, Warp, WriteInteractionOptions } from "warp-contracts";
 
 import { State as Erc1155State } from "erc1155/State";
 import { Action as Erc1155Action } from "erc1155/Action";
-import { State as FeeState } from "fee/State";
+import { State as ScarcityState } from "scarcity/State";
 import { State as ShuffleState } from "shuffle/State";
 
 export const UNIT = 1_000_000;
 
-type ContractName = "erc1155" | "fee" | "shuffle" | "test-multi-read";
+type ContractName = "erc1155" | "scarcity" | "shuffle" | "test-multi-read";
 
 export async function deployContract<T extends ContractName>(
     warp: Warp,
@@ -19,12 +19,10 @@ export async function deployContract<T extends ContractName>(
     contract: T,
     initState: T extends "erc1155"
         ? Erc1155State
-        : T extends "fee"
-        ? FeeState
+        : T extends "scarcity"
+        ? ScarcityState
         : T extends "shuffle"
         ? ShuffleState
-        : T extends "test-multi-read"
-        ? Record<string, never>
         : never,
 ) {
     const wasmDir = `../${contract}/implementation/pkg`;

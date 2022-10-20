@@ -22,7 +22,6 @@ import { Action as Erc1155Action } from "erc1155/Action";
 import { State as ShuffleState } from "shuffle/State";
 import { Action as ShuffleAction } from "shuffle/Action";
 import { ContractError as ShuffleError } from "shuffle/ContractError";
-import { ContractError as FeeError } from "fee/ContractError";
 
 import {
     UNIT,
@@ -128,7 +127,7 @@ beforeAll(async () => {
     const shuffleInitState: ShuffleState = {
         name: "TEST-SHUFFLES",
         settings: {
-            superOperator: op.address,
+            superOperators: [op.address],
             operators: [],
             erc1155: erc1155TxId,
             custodian: op.address,

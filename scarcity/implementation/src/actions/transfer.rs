@@ -7,7 +7,7 @@ use warp_erc1155::{
     state::{Balance, State as Erc1155State},
 };
 
-use warp_fee::{
+use warp_scarcity::{
     action::{ActionResult, CreateFee, HandlerResult, Transfer},
     error::ContractError,
     state::{Fees, Nft, State, UNIT},
