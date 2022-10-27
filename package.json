@@ -3,7 +3,7 @@
     "private": true,
     "workspaces": [
         "erc1155",
-        "fee",
+        "scarcity",
         "shuffle",
         "tests"
     ],
