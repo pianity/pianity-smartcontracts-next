@@ -26,6 +26,10 @@ impl Actionable for Configure {
             state.settings.operators = operators;
         }
 
+        if let Some(proxies) = self.proxies {
+            state.settings.proxies = proxies;
+        }
+
         return Ok(HandlerResult::Write(state));
     }
 }
