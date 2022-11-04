@@ -1,5 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
 use crate::state::{ShuffleScarcity, State};
@@ -11,11 +12,20 @@ pub struct MintShuffle {
     pub ticker: Option<String>,
 }
 
+#[derive(JsonSchema, Default, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoostOpenShuffle {
+    /// 0 <= boost <= 1
+    pub boost: f32,
+    pub shuffle_price: Balance,
+}
+
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenShuffle {
     pub shuffle_id: String,
     pub owner: Option<String>,
+    pub boost: Option<BoostOpenShuffle>,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]

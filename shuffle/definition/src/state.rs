@@ -3,6 +3,17 @@ use std::collections::HashMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+struct NftBaseId {
+    id: String,
+    scarcity: String,
+}
+
+struct NftId {
+    base_id: NftBaseId,
+    edition: String,
+}
+
+// TODO: Rename this to ShuffleBaseIds
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ShuffleScarcity {
@@ -43,6 +54,11 @@ pub struct Shuffle {
     pub nfts: ShuffleScarcity,
 }
 
+// pub struct BoostRules {
+//     pub legendary: u32,
+//     pub epic
+// }
+
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
@@ -60,8 +76,11 @@ pub struct Settings {
     /// a resell.
     pub custodian: String,
 
-    /// Token ID of the token used for paying
-    pub exchange_token: String,
+    /// Id of the token used to boost shuffles luck
+    pub boost_token: String,
+    pub boost_price_modifier: f32,
+    /// 0 <= boost_cap <= 1
+    pub boost_cap: f32,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]

@@ -18,6 +18,9 @@ js-sys = "0.3.56"
 async-recursion = "1.0.0"
 async-trait = "0.1.56"
 tokio-test = "0.4.2"
+sha3 = "0.10.6"
+num-bigint = "0.4.3"
+num-traits = "0.2.15"
 
 [package.metadata.wasm-pack.profile.profiling.wasm-bindgen]
 demangle-name-section = false

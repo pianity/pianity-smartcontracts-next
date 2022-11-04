@@ -55,4 +55,6 @@ pub enum ContractError {
     NftAlreadyInAShuffle(String, String),
     /// (shuffle_id)
     NoNftAvailable(String),
+
+    BoostCapExceeded,
 }
