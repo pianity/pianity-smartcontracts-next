@@ -16,29 +16,29 @@ struct NftId {
 // TODO: Rename this to ShuffleBaseIds
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ShuffleScarcity {
+pub enum ShuffleBaseIds {
     Legendary([String; 2]),
     Epic([String; 3]),
     Rare([String; 4]),
 }
 
-impl Default for ShuffleScarcity {
+impl Default for ShuffleBaseIds {
     fn default() -> Self {
         Self::Legendary(["1".to_string(), "2".to_string()])
     }
 }
 
-impl From<&ShuffleScarcity> for Vec<String> {
-    fn from(item: &ShuffleScarcity) -> Self {
+impl From<&ShuffleBaseIds> for Vec<String> {
+    fn from(item: &ShuffleBaseIds) -> Self {
         match item {
-            ShuffleScarcity::Legendary(nfts) => nfts.to_vec(),
-            ShuffleScarcity::Epic(nfts) => nfts.to_vec(),
-            ShuffleScarcity::Rare(nfts) => nfts.to_vec(),
+            ShuffleBaseIds::Legendary(nfts) => nfts.to_vec(),
+            ShuffleBaseIds::Epic(nfts) => nfts.to_vec(),
+            ShuffleBaseIds::Rare(nfts) => nfts.to_vec(),
         }
     }
 }
 
-impl<'a> IntoIterator for &'a ShuffleScarcity {
+impl<'a> IntoIterator for &'a ShuffleBaseIds {
     type Item = String;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -51,7 +51,7 @@ impl<'a> IntoIterator for &'a ShuffleScarcity {
 #[serde(rename_all = "camelCase")]
 pub struct Shuffle {
     pub id: String,
-    pub nfts: ShuffleScarcity,
+    pub nfts: ShuffleBaseIds,
 }
 
 // pub struct BoostRules {

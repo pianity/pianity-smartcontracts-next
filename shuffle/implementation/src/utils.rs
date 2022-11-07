@@ -1,7 +1,7 @@
 use num_bigint::BigUint;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Sha3_256};
-use warp_shuffle::state::{ShuffleScarcity, State};
+use warp_shuffle::state::{ShuffleBaseIds, State};
 
 use crate::contract_utils::js_imports::log;
 
@@ -9,7 +9,7 @@ fn index_to_editions_count(n: usize) -> u32 {
     (0..n).fold(1, |acc, _| acc * 10)
 }
 
-pub fn get_all_nfts_ids(nfts: &ShuffleScarcity) -> Vec<String> {
+pub fn get_all_nfts_ids(nfts: &ShuffleBaseIds) -> Vec<String> {
     Vec::from(nfts)
         .iter()
         .enumerate()
@@ -51,17 +51,6 @@ impl Rng {
     }
 }
 
-// /// Convert
-// fn scarcity_id_to_u32(scarcity: &str) -> Option<u32> {
-//     match scarcity {
-//         "UNIQUE" => 1,
-//         "LEGENDARY" => 10,
-//         "EPIC" => 100,
-//         "RARE" => 1000,
-//         _ => 0,
-//     }
-// }
-
 #[derive(Debug)]
 pub enum Scarcity {
     Unique,
@@ -83,17 +72,6 @@ impl TryFrom<&str> for Scarcity {
         }
     }
 }
-
-// impl Into<u32> for Scarcity {
-//     fn into(self) -> u32 {
-//         match self {
-//             Self::Unique => 1,
-//             Self::Legendary => 10,
-//             Self::Epic => 100,
-//             Self::Rare => 1000,
-//         }
-//     }
-// }
 
 impl From<&Scarcity> for u32 {
     fn from(scarcity: &Scarcity) -> Self {
@@ -169,42 +147,19 @@ impl ToString for NftId {
     }
 }
 
-// fn is_prefix_valid(edition: &str, scarcity: &str) -> bool {
-//     let edition = edition.parse::<u32>().unwrap_or(0);
-//
-//     let max_edition = match scarcity {
-//         "UNIQUE" => 1,
-//         "LEGENDARY" => 10,
-//         "EPIC" => 100,
-//         "RARE" => 1000,
-//         _ => 0,
-//     };
-//
-//     edition > 0 && edition <= max_edition
-// }
-
 /// 1-UNIQUE-TX_ID
 pub fn splited_nft_id(id: &str) -> Option<NftId> {
     let splited = {
         let mut splited = id.splitn(3, '-');
 
-        log(&format!("splited before: {:?}", splited));
-
         (splited.next()?, splited.next()?, splited.next()?)
     };
 
-    log(&format!("splited: {:?}", splited));
-
     let scarcity = Scarcity::try_from(splited.1).ok()?;
-
-    log(&format!("scarcity: {:?}", scarcity));
 
     let edition = splited.0.parse::<u32>().unwrap_or(0);
 
-    log(&format!("edition: {}", edition));
-
     if edition > u32::from(&scarcity) {
-        log(&format!("more than: {}", u32::from(&scarcity)));
         None
     } else {
         Some(NftId {

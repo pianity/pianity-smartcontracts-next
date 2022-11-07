@@ -28,6 +28,6 @@ impl Actionable for Configure {
             state.settings.operators = operators;
         }
 
-        return Ok(HandlerResult::Write(state));
+        Ok(HandlerResult::Write(state))
     }
 }

@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
-use crate::state::{ShuffleScarcity, State};
+use crate::state::{ShuffleBaseIds, State};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MintShuffle {
-    pub nfts: ShuffleScarcity,
+    pub nfts: ShuffleBaseIds,
     pub ticker: Option<String>,
 }
 

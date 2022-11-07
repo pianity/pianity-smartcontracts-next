@@ -22,11 +22,13 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
         return Err(ContractError::UnauthorizedAddress(direct_caller));
     }
 
-    match action {
+    let value = match action {
         Action::MintShuffle(action) => action.action(direct_caller, state).await,
         Action::OpenShuffle(action) => action.action(direct_caller, state).await,
         Action::Configure(action) => action.action(direct_caller, state),
         Action::Evolve(action) => action.action(direct_caller, state),
         Action::Batch(action) => action.action(direct_caller, state).await,
-    }
+    };
+
+    value
 }

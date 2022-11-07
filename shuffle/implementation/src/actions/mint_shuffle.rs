@@ -12,7 +12,7 @@ use warp_erc1155::{
 use warp_shuffle::{
     action::{ActionResult, HandlerResult, MintShuffle},
     error::ContractError,
-    state::{Shuffle, ShuffleScarcity, State},
+    state::{Shuffle, ShuffleBaseIds, State},
 };
 
 use crate::{actions::AsyncActionable, contract_utils::foreign_call::write_foreign_contract};
@@ -30,14 +30,14 @@ pub struct InternalWriteResult {
 
 async fn verify_nfts(
     erc1155: &String,
-    nfts: &ShuffleScarcity,
+    nfts: &ShuffleBaseIds,
     all_shuffles: &HashMap<String, Shuffle>,
 ) -> Result<(), ContractError> {
     let nfts_vec: Vec<String> = nfts.into();
 
     for (shuffle_id, shuffle) in all_shuffles.iter() {
         for nft in &nfts_vec {
-            if Vec::from(&shuffle.nfts).contains(&nft) {
+            if Vec::from(&shuffle.nfts).contains(nft) {
                 return Err(ContractError::NftAlreadyInAShuffle(
                     shuffle_id.clone(),
                     nft.clone(),
@@ -66,9 +66,9 @@ impl AsyncActionable for MintShuffle {
         verify_nfts(&state.settings.erc1155, &self.nfts, &state.shuffles).await?;
 
         let total_editions = match &self.nfts {
-            ShuffleScarcity::Legendary(_) => 11,
-            ShuffleScarcity::Epic(_) => 111,
-            ShuffleScarcity::Rare(_) => 1111,
+            ShuffleBaseIds::Legendary(_) => 11,
+            ShuffleBaseIds::Epic(_) => 111,
+            ShuffleBaseIds::Rare(_) => 1111,
         };
 
         let prefix = "SHUFFLE";
@@ -97,7 +97,7 @@ impl AsyncActionable for MintShuffle {
             erc1155_mint,
         )
         .await
-        .map_err(|err| ContractError::Erc1155Error(err))?;
+        .map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::Write(state))
     }
