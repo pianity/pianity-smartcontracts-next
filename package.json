@@ -27,5 +27,8 @@
     "packageManager": "yarn@3.2.0",
     "devDependencies": {
         "koumu": "0.1.0"
+    },
+    "resolutions": {
+        "warp-contracts": "portal:/home/noom/dev/pianity/warp-fork"
     }
 }
