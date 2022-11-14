@@ -11,12 +11,7 @@ use crate::{
 };
 
 impl Actionable for Configure {
-    fn action(
-        self,
-        caller: String,
-        mut state: State,
-        _foreign_caller: &mut ForeignContractCaller,
-    ) -> ActionResult {
+    fn action(self, caller: String, mut state: State) -> ActionResult {
         let is_super_op = is_super_op(&state, &caller);
         let is_op = is_op(&state, &caller);
 

@@ -8,12 +8,7 @@ use crate::utils::is_super_op;
 use super::Actionable;
 
 impl Actionable for Evolve {
-    fn action(
-        self,
-        caller: String,
-        mut state: State,
-        _foreign_caller: &mut ForeignContractCaller,
-    ) -> ActionResult {
+    fn action(self, caller: String, mut state: State) -> ActionResult {
         match state.can_evolve {
             Some(can_evolve) => {
                 if can_evolve && is_super_op(&state, &caller) {

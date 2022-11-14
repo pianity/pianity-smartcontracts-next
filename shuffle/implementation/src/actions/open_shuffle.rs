@@ -159,7 +159,6 @@ impl AsyncActionable for OpenShuffle {
             .map_err(|_err| ContractError::Erc1155ReadFailed)?
         {
             ForeignContractState::Erc1155(erc1155_state) => erc1155_state,
-            _ => return Err(ContractError::Erc1155ReadFailed),
         };
 
         let owner_balance = erc1155_state

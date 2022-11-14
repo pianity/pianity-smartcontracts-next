@@ -61,7 +61,6 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
 
     let state = STATE.with(|service| service.borrow().clone());
     let mut foreign_caller = ForeignContractCaller::new();
-
     let result = contract::handle(state, action.unwrap(), &mut foreign_caller).await;
 
     match result {

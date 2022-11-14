@@ -72,9 +72,8 @@ impl ForeignContractCaller {
     ) -> Result<&ForeignContractState, ForeignWriteError<ERROR>> {
         let input = JsValue::from_serde(&input).unwrap();
 
-        let result = SmartWeave::write(contract_address, input).await;
-
-        let result = result
+        let result = SmartWeave::write(contract_address, input)
+            .await
             .into_serde::<ForeignCallResult<ERROR>>()
             .map_err(|_err| ForeignWriteError::ParseError)?;
 
