@@ -21,8 +21,8 @@ let interact: ReturnType<typeof createInteractor<Action, State, ContractError>>;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
-    LoggerFactory.INST.logLevel("debug", "WASM:Rust");
-    LoggerFactory.INST.logLevel("debug", "ContractHandler");
+    // LoggerFactory.INST.logLevel("debug", "WASM:Rust");
+    // LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
     arlocal = new Arlocal(1984, false, `./arlocal.erc1155.db`, false);
     await arlocal.start();
