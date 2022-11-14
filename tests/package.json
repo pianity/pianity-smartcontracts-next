@@ -16,7 +16,7 @@
         "ts-node": "^10.4.0",
         "tsconfig-paths": "^4.0.0",
         "typescript": "^4.7.4",
-        "warp-contracts": "pianity/warp#c5cc44ea1952bf94073a1153ba05fcc946905548"
+        "warp-contracts": "pianity/warp#04e421de3b0da950afae6109405df0143b0f9e50"
     },
     "devDependencies": {
         "@types/node": "^18.0.0",

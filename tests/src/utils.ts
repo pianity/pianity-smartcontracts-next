@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import Arweave from "arweave";
 import { JWKInterface } from "arweave/node/lib/wallet";
 import { Contract, Warp, WriteInteractionOptions } from "warp-contracts";
+import { expect } from "@jest/globals";
 
 import { State as Erc1155State } from "erc1155/State";
 import { Action as Erc1155Action } from "erc1155/Action";
@@ -10,6 +11,14 @@ import { State as ScarcityState } from "scarcity/State";
 import { State as ShuffleState } from "shuffle/State";
 
 export const UNIT = 1_000_000;
+
+export function expectOk(resultType: string | undefined): asserts resultType is "ok" {
+    expect(resultType).toEqual("ok");
+}
+
+export function expectError(resultType: string | undefined): asserts resultType is "error" {
+    expect(resultType).toEqual("error");
+}
 
 type ContractName = "erc1155" | "scarcity" | "shuffle" | "test-multi-read";
 
@@ -40,9 +49,9 @@ export async function deployContract<T extends ContractName>(
     return deployment;
 }
 
-export function createInteractor<ACTION>(
+export function createInteractor<ACTION, STATE, ERROR>(
     warp: Warp,
-    contract: Contract,
+    contract: Contract<STATE, ERROR>,
     defaultWallet: JWKInterface,
     defaultOptions: WriteInteractionOptions = {},
 ) {
@@ -58,12 +67,14 @@ export function createInteractor<ACTION>(
             contract.connect(defaultWallet);
         }
 
+        const now = Date.now();
         const interactionResult = await contract.writeInteraction(interaction, {
             ...defaultOptions,
             ...options,
         });
+        console.log("interaction took", Date.now() - now, "ms");
 
-        // await warp.testing.mineBlock();
+        await warp.testing.mineBlock();
 
         return interactionResult;
     };
@@ -82,8 +93,12 @@ export async function generateWallet(): Promise<Wallet> {
     };
 }
 
-export function range(n: number): number[] {
-    return [...Array(n).keys()];
+export function range(end: number, start?: number): number[] {
+    if (start) {
+        return Array.from({ length: end - start }, (_, i) => start + i);
+    } else {
+        return [...Array(end).keys()];
+    }
 }
 
 export function dbg<T>(args: T): T {

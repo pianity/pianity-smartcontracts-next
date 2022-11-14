@@ -6,11 +6,17 @@ use warp_shuffle::{
 
 use crate::{
     actions::Actionable,
+    contract_utils::foreign_call::ForeignContractCaller,
     utils::{is_op, is_super_op},
 };
 
 impl Actionable for Configure {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
+    fn action(
+        self,
+        caller: String,
+        mut state: State,
+        _foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
         let is_super_op = is_super_op(&state, &caller);
         let is_op = is_op(&state, &caller);
 

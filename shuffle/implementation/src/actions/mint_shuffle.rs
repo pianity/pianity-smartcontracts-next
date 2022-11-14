@@ -15,23 +15,17 @@ use warp_shuffle::{
     state::{Shuffle, ShuffleBaseIds, State},
 };
 
-use crate::{actions::AsyncActionable, contract_utils::foreign_call::write_foreign_contract};
 use crate::{
-    contract_utils::{foreign_call::read_foreign_contract_state, js_imports::Transaction},
-    utils::get_all_nfts_ids,
+    actions::AsyncActionable,
+    contract_utils::foreign_call::{ForeignContractCaller, ForeignContractState},
 };
-
-// TODO: Move me somewhere that makes sense and remove my duplicates in other actions
-#[derive(Debug, Serialize, Deserialize)]
-pub struct InternalWriteResult {
-    #[serde(rename = "type")]
-    result_type: String,
-}
+use crate::{contract_utils::js_imports::Transaction, utils::get_all_nfts_ids};
 
 async fn verify_nfts(
     erc1155: &String,
     nfts: &ShuffleBaseIds,
     all_shuffles: &HashMap<String, Shuffle>,
+    foreign_caller: &mut ForeignContractCaller,
 ) -> Result<(), ContractError> {
     let nfts_vec: Vec<String> = nfts.into();
 
@@ -46,10 +40,15 @@ async fn verify_nfts(
         }
     }
 
-    let tokens = read_foreign_contract_state::<Erc1155State>(erc1155)
+    let tokens = &match foreign_caller
+        .read(erc1155)
         .await
         .map_err(|_err| ContractError::Erc1155ReadFailed)?
-        .tokens;
+    {
+        ForeignContractState::Erc1155(state) => state,
+        _ => return Err(ContractError::Erc1155ReadFailed),
+    }
+    .tokens;
 
     for id in get_all_nfts_ids(nfts) {
         if !tokens.contains_key(&id) {
@@ -62,8 +61,19 @@ async fn verify_nfts(
 
 #[async_trait(?Send)]
 impl AsyncActionable for MintShuffle {
-    async fn action(self, _caller: String, mut state: State) -> ActionResult {
-        verify_nfts(&state.settings.erc1155, &self.nfts, &state.shuffles).await?;
+    async fn action(
+        self,
+        _caller: String,
+        mut state: State,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
+        verify_nfts(
+            &state.settings.erc1155,
+            &self.nfts,
+            &state.shuffles,
+            foreign_caller,
+        )
+        .await?;
 
         let total_editions = match &self.nfts {
             ShuffleBaseIds::Legendary(_) => 11,
@@ -92,12 +102,13 @@ impl AsyncActionable for MintShuffle {
             qty: Balance::new(total_editions),
         });
 
-        write_foreign_contract::<InternalWriteResult, Erc1155ContractError, Erc1155Action::Action>(
-            &state.settings.erc1155,
-            erc1155_mint,
-        )
-        .await
-        .map_err(ContractError::Erc1155Error)?;
+        foreign_caller
+            .write::<Erc1155ContractError, Erc1155Action::Action>(
+                &state.settings.erc1155,
+                erc1155_mint,
+            )
+            .await
+            .map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::Write(state))
     }

@@ -28,6 +28,12 @@ pub struct OpenShuffle {
     pub boost: Option<BoostOpenShuffle>,
 }
 
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenShuffleBatch {
+    pub actions: Vec<OpenShuffle>,
+}
+
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {

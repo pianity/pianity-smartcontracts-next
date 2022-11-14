@@ -5,8 +5,9 @@ import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 
 import { State, Token } from "erc1155/State";
 import { Action } from "erc1155/Action";
+import { ContractError } from "erc1155/ContractError";
 
-import { createInteractor, deployContract } from "@/utils";
+import { createInteractor, deployContract, expectError, expectOk } from "@/utils";
 
 let arlocal: Arlocal;
 let warp: Warp;
@@ -14,9 +15,9 @@ let warp: Warp;
 let op: Wallet;
 let user: Wallet;
 
-let contract: Contract<State>;
+let contract: Contract<State, ContractError>;
 let contractId: string;
-let interact: ReturnType<typeof createInteractor<Action>>;
+let interact: ReturnType<typeof createInteractor<Action, State, ContractError>>;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
@@ -50,13 +51,13 @@ beforeAll(async () => {
 
     contractId = (await deployContract(warp, op.jwk, "erc1155", initState)).contractTxId;
     contract = warp
-        .contract<State>(contractId)
+        .contract<State, ContractError>(contractId)
         .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
         .connect(op.jwk);
-    interact = createInteractor<Action>(warp, contract, op.jwk);
+    interact = createInteractor<Action, State, ContractError>(warp, contract, op.jwk);
 
     console.log(`OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${contractId}`);
-}, 20_000);
+}, 25_000);
 
 afterAll(async () => {
     await arlocal.stop();
@@ -82,6 +83,8 @@ it("should mint an NFT", async () => {
         qty: "1",
     });
 
+    expectOk(mintResponse?.type);
+
     const tokenId = `NFT-${mintResponse?.originalTxId}`;
 
     const { state } = (await contract.readState()).cachedValue;
@@ -95,6 +98,8 @@ it("should burn an NFT", async () => {
         prefix: "NFT",
         qty: "1",
     });
+
+    expectOk(mintResponse?.type);
 
     const tokenId = `NFT-${mintResponse?.originalTxId}`;
 
@@ -127,7 +132,6 @@ it("should burn some tokens", async () => {
 
     {
         const { state } = (await contract.readState()).cachedValue;
-        console.log(JSON.stringify(state.tokens, undefined, 2));
         expect(state.tokens[tokenId].balances[op.address]).toBe("100");
         expect(state.tokens[tokenId].ticker).toBe(tokenId);
         expect(calculateTotalQty(state.tokens[tokenId])).toBe("100");
@@ -141,7 +145,6 @@ it("should burn some tokens", async () => {
 
     {
         const { state } = (await contract.readState()).cachedValue;
-        console.log(JSON.stringify(state.tokens, undefined, 2));
         expect(state.tokens[tokenId].balances[op.address]).toBe("50");
         expect(calculateTotalQty(state.tokens[tokenId])).toBe("50");
     }
@@ -154,13 +157,12 @@ it("should burn some tokens", async () => {
 
     {
         const { state } = (await contract.readState()).cachedValue;
-        console.log(JSON.stringify(state.tokens, undefined, 2));
         expect(state.tokens[tokenId]).toBeUndefined();
     }
 });
 
 it("should throw when non-op try to burn tokens", async () => {
-    const burnInteraction = interact(
+    const burnInteraction = await interact(
         {
             function: "burn",
             tokenId: "DOL",
@@ -169,7 +171,33 @@ it("should throw when non-op try to burn tokens", async () => {
         { wallet: user.jwk },
     );
 
-    await expect(burnInteraction).rejects.toThrow();
+    const expectedError: ContractError = {
+        kind: "UnauthorizedAddress",
+        data: user.address,
+    };
+
+    expectError(burnInteraction?.type);
+    expect(burnInteraction.error).toEqual(expectedError);
+});
+
+it("publish an invalid interaction with strict:false and read the state", async () => {
+    // This interaction is invalid because `mint` requires being an operator and `user` isn't
+    const interaction = await interact(
+        {
+            function: "mint",
+            qty: "1",
+        },
+        { wallet: user.jwk, strict: false },
+    );
+
+    expectOk(interaction?.type);
+
+    const state = (await contract.readState()).cachedValue;
+
+    expect(state.errors[interaction.originalTxId]).toEqual({
+        kind: "UnauthorizedAddress",
+        data: user.address,
+    });
 });
 
 function calculateTotalQty(token: Token): string {

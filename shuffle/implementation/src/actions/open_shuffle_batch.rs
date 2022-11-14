@@ -11,17 +11,29 @@ use warp_erc1155::{
 };
 
 use warp_shuffle::{
-    action::{ActionResult, BoostOpenShuffle, HandlerResult, OpenShuffle},
+    action::{ActionResult, BoostOpenShuffle, HandlerResult, OpenShuffleBatch},
     error::ContractError,
     state::{ShuffleBaseIds, State},
 };
 
 use crate::{
     actions::AsyncActionable,
-    contract_utils::foreign_call::{ForeignContractCaller, ForeignContractState},
+    contract_utils::foreign_call::write_foreign_contract,
     utils::{splited_nft_id, NftId, Rng, Scarcity},
 };
-use crate::{contract_utils::js_imports::Vrf, utils::get_all_nfts_ids};
+use crate::{
+    contract_utils::{
+        foreign_call::read_foreign_contract_state,
+        js_imports::{log, Vrf},
+    },
+    utils::get_all_nfts_ids,
+};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InternalWriteResult {
+    #[serde(rename = "type")]
+    result_type: String,
+}
 
 fn is_nft_available(
     nft_id: &String,
@@ -120,13 +132,8 @@ fn draw_nft(shuffle: &Vec<Vec<String>>, boost: f32) -> &String {
 }
 
 #[async_trait(?Send)]
-impl AsyncActionable for OpenShuffle {
-    async fn action(
-        self,
-        caller: String,
-        state: State,
-        foreign_caller: &mut ForeignContractCaller,
-    ) -> ActionResult {
+impl AsyncActionable for OpenShuffleBatch {
+    async fn action(self, caller: String, state: State) -> ActionResult {
         let owner = self.owner.unwrap_or_else(|| caller.clone());
 
         let (boost, boost_price) = {
@@ -153,14 +160,9 @@ impl AsyncActionable for OpenShuffle {
             .get(&self.shuffle_id)
             .ok_or_else(|| ContractError::ShuffleNotFound(self.shuffle_id.clone()))?;
 
-        let erc1155_state = match foreign_caller
-            .read(&state.settings.erc1155)
+        let erc1155_state = read_foreign_contract_state::<Erc1155State>(&state.settings.erc1155)
             .await
-            .map_err(|_err| ContractError::Erc1155ReadFailed)?
-        {
-            ForeignContractState::Erc1155(erc1155_state) => erc1155_state,
-            _ => return Err(ContractError::Erc1155ReadFailed),
-        };
+            .map_err(|_err| ContractError::Erc1155ReadFailed)?;
 
         let owner_balance = erc1155_state
             .tokens
@@ -209,15 +211,12 @@ impl AsyncActionable for OpenShuffle {
             }));
         }
 
-        foreign_caller
-            .write::<Erc1155ContractError, Erc1155Action::Action>(
-                &state.settings.erc1155,
-                Erc1155Action::Action::Batch(Erc1155Action::Batch {
-                    actions: batch.clone(),
-                }),
-            )
-            .await
-            .map_err(ContractError::Erc1155Error)?;
+        write_foreign_contract::<InternalWriteResult, Erc1155ContractError, Erc1155Action::Action>(
+            &state.settings.erc1155,
+            Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: batch }),
+        )
+        .await
+        .map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::Write(state))
     }

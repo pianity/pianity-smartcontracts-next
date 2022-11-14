@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(JsonSchema, Serialize, Deserialize, Debug)]
 #[serde(tag = "kind", content = "data")]
@@ -10,8 +10,7 @@ pub enum ForeignReadError {
 
 #[derive(JsonSchema, Serialize, Deserialize, Debug)]
 #[serde(tag = "kind", content = "data")]
-pub enum ForeignWriteError<T: Serialize + DeserializeOwned + std::fmt::Debug> {
-    #[serde(deserialize_with = "T::deserialize")]
+pub enum ForeignWriteError<T> {
     ContractError(T),
     ParseError,
 }
@@ -29,7 +28,7 @@ pub enum ContractError {
     EvolveNotAllowed,
 
     ForbiddenNestedBatch,
-    CannotMixeReadAndWrite,
+    CannotMixReadAndWrite,
     EmptyBatch,
 
     UnauthorizedConfiguration,
