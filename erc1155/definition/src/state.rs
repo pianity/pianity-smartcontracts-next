@@ -28,7 +28,7 @@ mod string {
     }
 }
 
-pub type BalancePrecision = u32;
+pub type BalancePrecision = u64;
 
 #[derive(JsonSchema, Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", transparent)]

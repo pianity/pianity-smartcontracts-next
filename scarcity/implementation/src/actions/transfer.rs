@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::{
     action::{self as Erc1155Action},
     error::ContractError as Erc1155ContractError,
-    state::{Balance, State as Erc1155State},
+    state::{Balance, BalancePrecision, State as Erc1155State},
 };
 
 use warp_scarcity::{
@@ -76,15 +76,14 @@ impl AsyncActionable for Transfer {
                     from: Some(self.to.clone()),
                     to: nft_owner.clone(),
                     token_id: state.settings.exchange_token.clone(),
-                    qty: Balance::new(self.price.value * (rate / UNIT)),
+                    qty: Balance::new(self.price.value * (rate / UNIT) as BalancePrecision),
                 });
             }
 
             // Pay the share holders.
             nft.fees.iter().for_each(|(address, share)| {
-                let fee_amount = (self.price.value as f32
-                    * (*share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
-                    as u32;
+                let fee_amount = (self.price.value as f32 * (share / (UNIT * (UNIT / rate))) as f32)
+                    as BalancePrecision;
 
                 transfers.push(Erc1155Action::Transfer {
                     from: Some(self.to.clone()),
