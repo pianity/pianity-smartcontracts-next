@@ -12,6 +12,8 @@ use warp_scarcity::action::{Action, HandlerResult};
 use warp_scarcity::error::ContractError;
 use warp_scarcity::state::State;
 
+use super::foreign_call::ForeignContractCaller;
+
 /*
 Note: in order do optimize communication between host and the WASM module,
 we're storing the state inside the WASM module (for the time of state evaluation).
@@ -58,7 +60,8 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
     }
 
     let state = STATE.with(|service| service.borrow().clone());
-    let result = contract::handle(state, action.unwrap()).await;
+    let mut foreign_caller = ForeignContractCaller::new();
+    let result = contract::handle(state, action.unwrap(), &mut foreign_caller).await;
 
     match result {
         Ok(HandlerResult::Write(state)) => {

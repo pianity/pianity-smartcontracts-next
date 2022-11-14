@@ -15,33 +15,42 @@ use warp_scarcity::{
 use wasm_bindgen::UnwrapThrowExt;
 
 use crate::{
-    actions::{Actionable, AsyncActionable},
-    contract_utils::foreign_call::write_foreign_contract,
-};
-use crate::{
-    contract_utils::{foreign_call::read_foreign_contract_state, js_imports::log},
+    actions::AsyncActionable,
+    contract_utils::foreign_call::{ForeignContractCaller, ForeignContractState},
     utils::splited_nft_id,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct InternalWriteResult {
-    #[serde(rename = "type")]
-    result_type: String,
-}
+async fn get_token_owner(
+    foreign_caller: &mut ForeignContractCaller,
+    erc1155: &str,
+    nft_id: &str,
+) -> Result<String, ContractError> {
+    let state = match foreign_caller
+        .read(&erc1155.to_string())
+        .await
+        .map_err(|_err| ContractError::Erc1155ReadFailed)?
+    {
+        ForeignContractState::Erc1155(state) => state,
+    };
 
-async fn get_token_owner(erc1155: &str, nft_id: &str) -> Option<String> {
-    let state = read_foreign_contract_state::<Erc1155State>(&erc1155.to_string()).await;
-
-    let token = state.tokens.get(nft_id)?;
+    let token = state
+        .tokens
+        .get(nft_id)
+        .ok_or(ContractError::TokenOwnerNotFound)?;
 
     let owner = token.balances.iter().next().unwrap_throw();
 
-    Some(owner.0.clone())
+    Ok(owner.0.clone())
 }
 
 #[async_trait(?Send)]
 impl AsyncActionable for Transfer {
-    async fn action(self, _caller: String, state: State) -> ActionResult {
+    async fn action(
+        self,
+        _caller: String,
+        state: State,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
         let nft_base_id = splited_nft_id(&self.nft_id)
             .ok_or_else(|| ContractError::InvalidNftId(self.nft_id.clone()))?
             .2;
@@ -51,9 +60,8 @@ impl AsyncActionable for Transfer {
             .get(nft_base_id)
             .ok_or_else(|| ContractError::TokenNotFound(self.nft_id.clone()))?;
 
-        let nft_owner = get_token_owner(&state.settings.erc1155, &self.nft_id)
-            .await
-            .ok_or(ContractError::TokenOwnerNotFound)?;
+        let nft_owner =
+            get_token_owner(foreign_caller, &state.settings.erc1155, &self.nft_id).await?;
 
         let is_resell = nft_owner != state.settings.custodian;
 
@@ -103,12 +111,13 @@ impl AsyncActionable for Transfer {
         let transaction_batch =
             Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers });
 
-        write_foreign_contract::<InternalWriteResult, Erc1155ContractError, Erc1155Action::Action>(
-            &state.settings.erc1155,
-            transaction_batch,
-        )
-        .await
-        .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+        foreign_caller
+            .write::<Erc1155ContractError, Erc1155Action::Action>(
+                &state.settings.erc1155,
+                transaction_batch,
+            )
+            .await
+            .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
 
         Ok(HandlerResult::Write(state))
     }

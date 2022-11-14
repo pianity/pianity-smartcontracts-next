@@ -1,10 +1,16 @@
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(JsonSchema, Serialize, Deserialize, Debug)]
 #[serde(tag = "kind", content = "data")]
-pub enum ForeignWriteError<T: Serialize + DeserializeOwned + std::fmt::Debug> {
-    #[serde(deserialize_with = "T::deserialize")]
+pub enum ForeignReadError {
+    // ReadError,
+    ParseError,
+}
+
+#[derive(JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(tag = "kind", content = "data")]
+pub enum ForeignWriteError<T> {
     ContractError(T),
     ParseError,
 }
@@ -40,6 +46,7 @@ pub enum ContractError {
 
     TransferResult(String),
 
+    Erc1155ReadFailed,
     Erc1155Error(ForeignWriteError<warp_erc1155::error::ContractError>),
     InvalidNftId(String),
 }

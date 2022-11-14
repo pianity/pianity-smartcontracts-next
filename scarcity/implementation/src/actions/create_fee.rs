@@ -1,19 +1,16 @@
 use async_trait::async_trait;
-use serde::Deserialize;
 
 use warp_scarcity::{
     action::{ActionResult, CreateFee, HandlerResult},
     error::ContractError,
-    state::{Fees, Nft, State, UNIT},
+    state::{Nft, State, UNIT},
 };
 
-use crate::contract_utils::foreign_call::read_foreign_contract_state;
 use crate::{
-    actions::{Actionable, AsyncActionable},
+    actions::AsyncActionable,
+    contract_utils::foreign_call::{ForeignContractCaller, ForeignContractState},
     utils::splited_nft_id,
 };
-
-use warp_erc1155::state::{State as Erc1155State, Token as Erc1155Token};
 
 pub fn create_fee_internal(create_fee: &CreateFee, state: &mut State) -> Result<(), ContractError> {
     if create_fee.rate > UNIT {
@@ -46,12 +43,23 @@ pub fn create_fee_internal(create_fee: &CreateFee, state: &mut State) -> Result<
 
 #[async_trait(?Send)]
 impl AsyncActionable for CreateFee {
-    async fn action(self, _caller: String, mut state: State) -> ActionResult {
+    async fn action(
+        self,
+        _caller: String,
+        mut state: State,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
         if state.nfts.contains_key(&self.nft_base_id) {
             return Err(ContractError::TokenAlreadyExists(self.nft_base_id));
         }
 
-        let erc1155: Erc1155State = read_foreign_contract_state(&state.settings.erc1155).await;
+        let erc1155 = match foreign_caller
+            .read(&state.settings.erc1155.to_string())
+            .await
+            .map_err(|_err| ContractError::Erc1155ReadFailed)?
+        {
+            ForeignContractState::Erc1155(state) => state,
+        };
 
         erc1155
             .tokens
