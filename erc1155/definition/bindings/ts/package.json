@@ -1,0 +1,17 @@
+{
+    "name": "@pianity/erc1155",
+    "version": "0.0.0",
+    "description": "Typescript types for the Erc1155 contract",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/pianity/pianity-smartcontracts-next.git"
+    },
+    "main": "src/index.d.ts",
+    "types": "src/index.d.ts",
+    "files": [
+        "Action.ts",
+        "ContractError.ts",
+        "State.ts",
+        "index.d.ts"
+    ],
+}

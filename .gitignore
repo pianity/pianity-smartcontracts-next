@@ -1,6 +1,7 @@
 *ignoreme*
 *arlocal*
 
+json/
 pkg
 target
 __tests__/*.json
@@ -8,7 +9,6 @@ coverage
 .DS_Store
 .secrets
 .idea
-bindings/
 logs
 cache/
 
