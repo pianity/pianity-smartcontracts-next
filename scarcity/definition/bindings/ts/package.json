@@ -1,7 +1,7 @@
 {
-    "name": "@pianity/erc1155",
+    "name": "@pianity/scarcity",
     "version": "0.0.1",
-    "description": "Typescript types for the Erc1155 contract",
+    "description": "Typescript types for the Scarcity contract",
     "repository": {
         "type": "git",
         "url": "https://github.com/pianity/pianity-smartcontracts-next.git"
