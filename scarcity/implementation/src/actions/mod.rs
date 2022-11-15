@@ -2,18 +2,16 @@ use async_trait::async_trait;
 
 use warp_scarcity::{action::ActionResult, state::State};
 
-// pub mod approval;
+pub mod attach_fee;
 pub mod batch;
 pub mod configure;
-pub mod create_fee;
 pub mod evolve;
 pub mod mint_nft;
 pub mod transfer;
 
-// pub use approval::*;
+pub use attach_fee::*;
 pub use batch::*;
 pub use configure::*;
-pub use create_fee::*;
 pub use evolve::*;
 pub use mint_nft::*;
 pub use transfer::*;

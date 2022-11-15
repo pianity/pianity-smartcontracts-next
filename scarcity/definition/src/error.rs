@@ -43,6 +43,7 @@ pub enum ContractError {
     TokenAlreadyExists(String),
     TokenDoesNotExist(String),
     TokenIsNotAnNFT(String),
+    InvalidTokenId,
 
     TransferResult(String),
 

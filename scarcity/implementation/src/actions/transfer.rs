@@ -8,16 +8,19 @@ use warp_erc1155::{
 };
 
 use warp_scarcity::{
-    action::{ActionResult, CreateFee, HandlerResult, Transfer},
+    action::{ActionResult, AttachFee, HandlerResult, Transfer},
     error::ContractError,
-    state::{Fees, Nft, State, UNIT},
+    state::{AttachedFee, Fees, State, UNIT},
 };
 use wasm_bindgen::UnwrapThrowExt;
 
 use crate::{
     actions::AsyncActionable,
-    contract_utils::foreign_call::{ForeignContractCaller, ForeignContractState},
-    utils::splited_nft_id,
+    contract_utils::{
+        foreign_call::{ForeignContractCaller, ForeignContractState},
+        js_imports::log,
+    },
+    utils::{parse_token_id, NftId, ShuffleId, TokenId},
 };
 
 async fn get_token_owner(
@@ -51,21 +54,26 @@ impl AsyncActionable for Transfer {
         state: State,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
-        let nft_base_id = splited_nft_id(&self.nft_id)
-            .ok_or_else(|| ContractError::InvalidNftId(self.nft_id.clone()))?
-            .2;
+        let base_id = match parse_token_id(&self.token_id) {
+            TokenId::Nft(NftId { base_id, .. }) => Ok(base_id),
+            TokenId::Shuffle(ShuffleId { base_id }) => Ok(base_id),
+            _ => Err(ContractError::InvalidTokenId),
+        }?;
 
-        let nft = state
-            .nfts
-            .get(nft_base_id)
-            .ok_or_else(|| ContractError::TokenNotFound(self.nft_id.clone()))?;
+        let fee = state
+            .attached_fees
+            .get(&base_id)
+            // TODO: Rename TokenNotFound to NoFeeAttached
+            .ok_or_else(|| ContractError::TokenNotFound(self.token_id.clone()))?;
 
-        let nft_owner =
-            get_token_owner(foreign_caller, &state.settings.erc1155, &self.nft_id).await?;
+        // let nft_owner =
+        //     get_token_owner(foreign_caller, &state.settings.erc1155, &self.token_id).await?;
 
-        let is_resell = nft_owner != state.settings.custodian;
+        let token_owner = self.from.clone();
 
-        let rate = if is_resell { nft.rate } else { UNIT };
+        let is_resell = self.from != state.settings.custodian;
+
+        let rate = if is_resell { fee.rate } else { UNIT };
 
         let mut transfers: Vec<Erc1155Action::Transfer> = Vec::new();
 
@@ -74,15 +82,16 @@ impl AsyncActionable for Transfer {
             if is_resell {
                 transfers.push(Erc1155Action::Transfer {
                     from: Some(self.to.clone()),
-                    to: nft_owner.clone(),
+                    to: token_owner.clone(),
                     token_id: state.settings.exchange_token.clone(),
                     qty: Balance::new(self.price.value * (rate / UNIT) as BalancePrecision),
                 });
             }
 
             // Pay the share holders.
-            nft.fees.iter().for_each(|(address, share)| {
-                let fee_amount = (self.price.value as f32 * (share / (UNIT * (UNIT / rate))) as f32)
+            fee.fees.iter().for_each(|(address, share)| {
+                let fee_amount = (self.price.value as f32
+                    * (*share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
                     as BalancePrecision;
 
                 transfers.push(Erc1155Action::Transfer {
@@ -94,11 +103,11 @@ impl AsyncActionable for Transfer {
             });
         }
 
-        // Transfer the NFT.
+        // Transfer the token.
         transfers.push(Erc1155Action::Transfer {
-            from: Some(nft_owner),
+            from: Some(token_owner),
             to: self.to.clone(),
-            token_id: self.nft_id,
+            token_id: self.token_id,
             qty: Balance::new(1),
         });
 

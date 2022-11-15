@@ -30,7 +30,7 @@ pub async fn handle(
     }
 
     match action {
-        Action::CreateFee(action) => action.action(direct_caller, state, foreign_caller).await,
+        Action::AttachFee(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Transfer(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Configure(action) => action.action(direct_caller, state),
         Action::Evolve(action) => action.action(direct_caller, state),

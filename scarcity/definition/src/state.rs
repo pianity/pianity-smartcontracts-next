@@ -15,7 +15,7 @@ pub type Fees = HashMap<String, u32>;
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Nft {
+pub struct AttachedFee {
     pub base_id: String,
     pub fees: Fees,
     pub rate: u32,
@@ -40,11 +40,6 @@ pub struct Settings {
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
 
-    // NOTE: Removed until a generalistic solution has been found.
-    // /// Addesses authorized to interact with the contract.
-    // ///
-    // /// If empty, all addresses are authorized.
-    // pub authorized_addresses: Vec<String>,
     /// Address of the attached ERC1155-compliant contract
     pub erc1155: String,
 
@@ -67,7 +62,7 @@ pub struct State {
 
     pub settings: Settings,
 
-    pub nfts: HashMap<String, Nft>,
+    pub attached_fees: HashMap<String, AttachedFee>,
 
     pub evolve: Option<String>,
     pub can_evolve: Option<bool>,

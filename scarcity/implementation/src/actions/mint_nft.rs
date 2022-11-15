@@ -7,7 +7,7 @@ use warp_erc1155::{
 };
 
 use warp_scarcity::{
-    action::{ActionResult, CreateFee, HandlerResult, MintNft},
+    action::{ActionResult, AttachFee, HandlerResult, MintNft},
     error::ContractError,
     state::State,
 };
@@ -15,7 +15,7 @@ use warp_scarcity::{
 use crate::actions::AsyncActionable;
 use crate::contract_utils::{foreign_call::ForeignContractCaller, js_imports::Transaction};
 
-use super::create_fee_internal;
+use super::attach_fee_internal;
 
 #[async_trait(?Send)]
 impl AsyncActionable for MintNft {
@@ -28,17 +28,17 @@ impl AsyncActionable for MintNft {
         let mut mints = Vec::new();
 
         let (scarcity_name, editions_count) = match self.scarcity {
-            warp_scarcity::action::NftScarcity::Unique => ("UNIQUE", 1),
-            warp_scarcity::action::NftScarcity::Legendary => ("LEGENDARY", 10),
-            warp_scarcity::action::NftScarcity::Epic => ("EPIC", 100),
-            warp_scarcity::action::NftScarcity::Rare => ("RARE", 1000),
+            warp_scarcity::action::Scarcity::Unique => ("UNIQUE", 1),
+            warp_scarcity::action::Scarcity::Legendary => ("LEGENDARY", 10),
+            warp_scarcity::action::Scarcity::Epic => ("EPIC", 100),
+            warp_scarcity::action::Scarcity::Rare => ("RARE", 1000),
         };
 
         let nft_base_id = self.ticker.clone().unwrap_or_else(Transaction::id);
 
-        create_fee_internal(
-            &CreateFee {
-                nft_base_id: nft_base_id.clone(),
+        attach_fee_internal(
+            &AttachFee {
+                base_id: nft_base_id.clone(),
                 rate: self.rate,
                 fees: self.fees.clone(),
             },

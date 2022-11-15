@@ -7,25 +7,52 @@ use crate::state::{Fees, State};
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateFee {
-    pub nft_base_id: String,
+pub struct AttachFee {
+    pub base_id: String,
     pub fees: Fees,
     pub rate: u32,
 }
 
+// TODO: This code is mostly duplicated from the Shuffle contract. It should be refactored to be
+// shared instead.
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum NftScarcity {
+pub enum Scarcity {
     Unique,
     Legendary,
     Epic,
     Rare,
 }
 
+impl TryFrom<&str> for Scarcity {
+    type Error = ();
+
+    fn try_from(scarcity_raw: &str) -> Result<Self, Self::Error> {
+        match scarcity_raw.to_lowercase().as_str() {
+            "unique" => Ok(Self::Unique),
+            "legendary" => Ok(Self::Legendary),
+            "epic" => Ok(Self::Epic),
+            "rare" => Ok(Self::Rare),
+            _ => Err(()),
+        }
+    }
+}
+
+impl ToString for Scarcity {
+    fn to_string(&self) -> String {
+        match self {
+            Scarcity::Unique => "UNIQUE".to_string(),
+            Scarcity::Legendary => "LEGENDARY".to_string(),
+            Scarcity::Epic => "EPIC".to_string(),
+            Scarcity::Rare => "RARE".to_string(),
+        }
+    }
+}
+
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MintNft {
-    pub scarcity: NftScarcity,
+    pub scarcity: Scarcity,
     pub ticker: Option<String>,
     pub fees: Fees,
     pub rate: u32,
@@ -34,8 +61,9 @@ pub struct MintNft {
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transfer {
+    pub from: String,
     pub to: String,
-    pub nft_id: String,
+    pub token_id: String,
     pub price: Balance,
 }
 
@@ -61,7 +89,7 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
-    CreateFee(CreateFee),
+    AttachFee(AttachFee),
 
     MintNft(MintNft),
 
