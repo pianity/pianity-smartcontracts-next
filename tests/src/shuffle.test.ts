@@ -165,7 +165,14 @@ beforeAll(async () => {
     );
 
     console.log(
-        `OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${erc1155TxId}\nSHUFFLE: ${shuffleTxId}`,
+        "OP:",
+        op.address,
+        "\nUSER:",
+        user.address,
+        "\nERC1155:",
+        erc1155TxId,
+        "\nSHUFFLE:",
+        shuffleTxId,
     );
 }, 25_000);
 

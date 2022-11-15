@@ -95,17 +95,6 @@ impl ToString for Scarcity {
     }
 }
 
-pub struct NftBaseId {
-    pub id: String,
-    pub scarcity: Scarcity,
-}
-
-impl ToString for NftBaseId {
-    fn to_string(&self) -> String {
-        format!("{}-{}", self.scarcity.to_string(), self.id)
-    }
-}
-
 pub struct NftId {
     pub id: String,
     pub scarcity: Scarcity,
@@ -147,7 +136,7 @@ impl ToString for NftId {
     }
 }
 
-/// 1-UNIQUE-TX_ID
+/// 1-UNIQUE-BASE_ID
 pub fn splited_nft_id(id: &str) -> Option<NftId> {
     let splited = {
         let mut splited = id.splitn(3, '-');

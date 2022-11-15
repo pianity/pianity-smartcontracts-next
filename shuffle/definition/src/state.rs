@@ -3,19 +3,12 @@ use std::collections::HashMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-struct NftBaseId {
-    id: String,
-    scarcity: String,
-}
-
-struct NftId {
-    base_id: NftBaseId,
-    edition: String,
-}
-
-// TODO: Rename this to ShuffleBaseIds
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+// TODO: These currently assumes that a base_id includes the scarcity (`scarcity-base_id`) when it
+// should not. Instead of accepting an array of base_ids that include the scarcity, it should only
+// accept a string representing only the base_id of the token and then deduce the full token id by
+// automatically prefixing the scarcity.
 pub enum ShuffleBaseIds {
     Legendary([String; 2]),
     Epic([String; 3]),
@@ -53,11 +46,6 @@ pub struct Shuffle {
     pub id: String,
     pub nfts: ShuffleBaseIds,
 }
-
-// pub struct BoostRules {
-//     pub legendary: u32,
-//     pub epic
-// }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]

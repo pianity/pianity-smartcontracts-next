@@ -7,7 +7,14 @@ import { State, Token } from "erc1155/State";
 import { Action } from "erc1155/Action";
 import { ContractError } from "erc1155/ContractError";
 
-import { createInteractor, deployContract, expectError, expectOk } from "@/utils";
+import {
+    createInteractor,
+    deployContract,
+    expectError,
+    expectOk,
+    generateWallet,
+    range,
+} from "@/utils";
 
 let arlocal: Arlocal;
 let warp: Warp;
@@ -56,7 +63,7 @@ beforeAll(async () => {
         .connect(op.jwk);
     interact = createInteractor<Action, State, ContractError>(warp, contract, op.jwk);
 
-    console.log(`OP: ${op.address}\nUSER: ${user.address}\nERC1155: ${contractId}`);
+    console.log("OP:", op.address, "\nUSER:", user.address, "\nERC1155:", contractId);
 }, 25_000);
 
 afterAll(async () => {
