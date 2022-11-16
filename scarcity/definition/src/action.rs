@@ -13,6 +13,14 @@ pub struct AttachRoyalties {
     pub rate: u32,
 }
 
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditAttachedRoyalties {
+    pub base_id: String,
+    pub royalties: Royalties,
+    pub rate: u32,
+}
+
 // TODO: This code is mostly duplicated from the Shuffle contract. It should be refactored to be
 // shared instead.
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
@@ -89,16 +97,12 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
+    EditAttachedRoyalties(EditAttachedRoyalties),
     AttachRoyalties(AttachRoyalties),
-
     MintNft(MintNft),
-
     Transfer(Transfer),
-
     Configure(Configure),
-
     Evolve(Evolve),
-
     Batch(Batch),
 }
 

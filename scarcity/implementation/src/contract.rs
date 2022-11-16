@@ -31,6 +31,7 @@ pub async fn handle(
 
     match action {
         Action::AttachRoyalties(action) => action.action(direct_caller, state),
+        Action::EditAttachedRoyalties(action) => action.action(direct_caller, state),
         Action::Transfer(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Configure(action) => action.action(direct_caller, state),
         Action::Evolve(action) => action.action(direct_caller, state),
