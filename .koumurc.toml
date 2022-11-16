@@ -2,13 +2,13 @@ mergeKind = ":twisted_rightwards_arrows:"
 
 maxCommitLength = 72
 
-# Leave the following commented to disable scopes
 [scopes]
 meta = "Anything about the project"
 docs = "Documentation"
 erc1155 = "Erc1155 contract package"
 scarcity = "scarcity contract package"
 shuffle = "Shuffle contract package"
+lock = "Lock contract package"
 tests = "Tests package"
 
 [kinds]
