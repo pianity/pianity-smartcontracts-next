@@ -7,7 +7,8 @@ use std::cell::RefCell;
 use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
-use crate::contract;
+use crate::{contract, contract_utils::foreign_call::ForeignContractCaller};
+
 use warp_lock::action::{Action, HandlerResult};
 use warp_lock::error::ContractError;
 use warp_lock::state::State;
@@ -58,7 +59,8 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
     }
 
     let state = STATE.with(|service| service.borrow().clone());
-    let result = contract::handle(state, action.unwrap()).await;
+    let mut foreign_caller = ForeignContractCaller::new();
+    let result = contract::handle(state, action.unwrap(), &mut foreign_caller).await;
 
     match result {
         Ok(HandlerResult::Write(state)) => {

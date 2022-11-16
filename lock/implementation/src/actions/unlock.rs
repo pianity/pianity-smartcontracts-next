@@ -16,11 +16,10 @@ use warp_lock::{
 };
 use wasm_bindgen::UnwrapThrowExt;
 
-use crate::contract_utils::{foreign_call::read_foreign_contract_state, js_imports::log};
 use crate::{
     actions::{Actionable, AsyncActionable},
     contract_utils::{
-        foreign_call::write_foreign_contract,
+        foreign_call::ForeignContractCaller,
         js_imports::{Block, Contract},
     },
 };
@@ -33,7 +32,12 @@ pub struct InternalWriteResult {
 
 #[async_trait(?Send)]
 impl AsyncActionable for Unlock {
-    async fn action(self, _caller: String, mut state: State) -> ActionResult {
+    async fn action(
+        self,
+        _caller: String,
+        mut state: State,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
         let lock_account = Contract::id();
 
         let current_block = Block::height() as u32;
@@ -76,16 +80,13 @@ impl AsyncActionable for Unlock {
             .collect();
 
         if transfers.len() > 0 {
-            write_foreign_contract::<
-                InternalWriteResult,
-                Erc1155ContractError,
-                Erc1155Action::Action,
-            >(
-                &state.settings.erc1155,
-                Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
-            )
-            .await
-            .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+            foreign_caller
+                .write::<Erc1155ContractError, Erc1155Action::Action>(
+                    &state.settings.erc1155,
+                    Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
+                )
+                .await
+                .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
         }
 
         Ok(HandlerResult::Write(state))
