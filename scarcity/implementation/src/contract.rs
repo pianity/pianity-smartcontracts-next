@@ -6,12 +6,12 @@ use warp_scarcity::{
     state::State,
 };
 
-use crate::contract_utils::{
-    foreign_call::ForeignContractCaller,
-    js_imports::{log, Block, Contract, SmartWeave, Transaction},
-};
 use crate::{
     actions::{self, Actionable, AsyncActionable},
+    contract_utils::{
+        foreign_call::ForeignContractCaller,
+        js_imports::{log, Block, Contract, SmartWeave, Transaction},
+    },
     utils::{is_op, is_super_op},
 };
 
@@ -30,7 +30,7 @@ pub async fn handle(
     }
 
     match action {
-        Action::AttachFee(action) => action.action(direct_caller, state, foreign_caller).await,
+        Action::AttachRoyalties(action) => action.action(direct_caller, state),
         Action::Transfer(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Configure(action) => action.action(direct_caller, state),
         Action::Evolve(action) => action.action(direct_caller, state),

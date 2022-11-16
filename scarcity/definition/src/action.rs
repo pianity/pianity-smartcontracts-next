@@ -3,13 +3,13 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
-use crate::state::{Fees, State};
+use crate::state::{Royalties, State};
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AttachFee {
+pub struct AttachRoyalties {
     pub base_id: String,
-    pub fees: Fees,
+    pub royalties: Royalties,
     pub rate: u32,
 }
 
@@ -54,7 +54,7 @@ impl ToString for Scarcity {
 pub struct MintNft {
     pub scarcity: Scarcity,
     pub ticker: Option<String>,
-    pub fees: Fees,
+    pub royalties: Royalties,
     pub rate: u32,
 }
 
@@ -89,7 +89,7 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
-    AttachFee(AttachFee),
+    AttachRoyalties(AttachRoyalties),
 
     MintNft(MintNft),
 

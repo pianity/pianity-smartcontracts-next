@@ -35,7 +35,7 @@ pub enum ContractError {
     UnauthorizedAddress(String),
     UnauthorizedTransfer(String),
 
-    InvalidFee,
+    InvalidRoyalties,
     InvalidRate,
 
     TokenOwnerNotFound,
