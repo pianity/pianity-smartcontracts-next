@@ -9,6 +9,7 @@ import { State as Erc1155State } from "erc1155/State";
 import { Action as Erc1155Action } from "erc1155/Action";
 import { State as ScarcityState } from "scarcity/State";
 import { State as ShuffleState } from "shuffle/State";
+import { State as LockState } from "lock/State";
 
 export const UNIT = 1_000_000;
 
@@ -20,7 +21,7 @@ export function expectError(resultType: string | undefined): asserts resultType 
     expect(resultType).toEqual("error");
 }
 
-type ContractName = "erc1155" | "scarcity" | "shuffle" | "test-multi-read";
+type ContractName = "erc1155" | "scarcity" | "shuffle" | "lock";
 
 export async function deployContract<T extends ContractName>(
     warp: Warp,
@@ -32,6 +33,8 @@ export async function deployContract<T extends ContractName>(
         ? ScarcityState
         : T extends "shuffle"
         ? ShuffleState
+        : T extends "lock"
+        ? LockState
         : never,
 ) {
     const wasmDir = `../${contract}/implementation/pkg`;

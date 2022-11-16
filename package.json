@@ -5,6 +5,7 @@
         "erc1155",
         "scarcity",
         "shuffle",
+        "lock",
         "tests"
     ],
     "scripts": {

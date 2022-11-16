@@ -17,6 +17,7 @@
             "erc1155/*": ["../erc1155/definition/bindings/ts/*"],
             "scarcity/*": ["../scarcity/definition/bindings/ts/*"],
             "shuffle/*": ["../shuffle/definition/bindings/ts/*"],
+            "lock/*": ["../lock/definition/bindings/ts/*"],
             "tsconfig": ["./tsconfig.json"]
         }
     },
