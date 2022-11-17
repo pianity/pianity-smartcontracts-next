@@ -1,9 +1,7 @@
-// NOTE: It is currently required to use a script file in order to run json2ts instead of using its
-// CLI because the CLI interprets `--additionalProperties false` as `false` being a string.
-
 import { parse, join } from "node:path";
 import { readdirSync, writeFileSync, mkdirSync } from "node:fs";
 
+import { SyntaxKind, createSourceFile, forEachChild, ScriptTarget } from "typescript";
 import { compileFromFile } from "json-schema-to-typescript";
 
 const DEFINITION_DIR = "./definition";
@@ -29,10 +27,28 @@ type Actions = {
     );
 }
 
+function getAction1Content(source: string): string | undefined {
+    const sourceFile = createSourceFile("Action.ts", source, ScriptTarget.Latest);
+
+    let action1Content: string | undefined;
+    forEachChild(sourceFile, (node) => {
+        if (!action1Content && node.kind === SyntaxKind.TypeAliasDeclaration) {
+            const identifierText = node
+                .getChildren(sourceFile)
+                .find(({ kind }) => kind === SyntaxKind.Identifier)
+                ?.getText(sourceFile);
+
+            if (identifierText === "Action1") {
+                action1Content = node.getText(sourceFile);
+            }
+        }
+    });
+
+    return action1Content;
+}
+
 function fixRecursiveActionType(content: string): string {
-    return content
-        .replace(/export type Action1 =.*?((\r*\n){2}|$)/gs, "")
-        .replace("Action1", "Action");
+    return content.replace(getAction1Content(content), "").replace("Action1", "Action");
 }
 
 (async () => {
