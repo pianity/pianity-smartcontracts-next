@@ -36,6 +36,8 @@ pub struct AttachedRoyalties {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub paused: bool,
+
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
 

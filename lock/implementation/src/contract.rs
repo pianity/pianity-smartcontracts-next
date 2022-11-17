@@ -1,7 +1,7 @@
 use async_recursion::async_recursion;
 
 use warp_lock::{
-    action::{Action, ActionResult},
+    action::{Action, ActionResult, Configure},
     error::ContractError,
     state::State,
 };
@@ -21,8 +21,14 @@ pub async fn handle(
     action: Action,
     foreign_caller: &mut ForeignContractCaller,
 ) -> ActionResult {
-    // let original_caller = Transaction::owner();
     let direct_caller = SmartWeave::caller();
+
+    if state.settings.paused
+        && std::mem::discriminant(&action)
+            != std::mem::discriminant(&Action::Configure(Configure::default()))
+    {
+        return Err(ContractError::ContractIsPaused);
+    }
 
     match action {
         Action::TransferLocked(action) => action.action(direct_caller, state, foreign_caller).await,

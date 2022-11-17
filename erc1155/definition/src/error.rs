@@ -1,8 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::Balance;
-
 #[derive(JsonSchema, Serialize, Deserialize, Debug)]
 #[serde(tag = "kind", content = "data")]
 pub enum ContractError {
@@ -23,4 +21,6 @@ pub enum ContractError {
     UnauthorizedAddress(String),
     UnauthorizedTransfer(String),
     TokenAlreadyExists,
+
+    ContractIsPaused,
 }

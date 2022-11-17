@@ -30,6 +30,10 @@ impl Actionable for Configure {
             state.settings.proxies = proxies;
         }
 
+        if let Some(paused) = self.paused {
+            state.settings.paused = paused;
+        }
+
         return Ok(HandlerResult::Write(state));
     }
 }

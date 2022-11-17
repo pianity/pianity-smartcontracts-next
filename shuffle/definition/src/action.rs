@@ -34,9 +34,10 @@ pub struct OpenShuffleBatch {
     pub actions: Vec<OpenShuffle>,
 }
 
-#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[derive(JsonSchema, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
+    pub paused: Option<bool>,
     pub super_operators: Option<Vec<String>>,
     pub operators: Option<Vec<String>>,
 }

@@ -58,9 +58,13 @@ pub struct Token {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub paused: bool,
+
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
+
     pub proxies: Vec<String>,
+
     pub allow_free_transfer: bool,
 }
 

@@ -11,6 +11,8 @@ pub const UNIT: u32 = 1_000_000;
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub paused: bool,
+
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
 

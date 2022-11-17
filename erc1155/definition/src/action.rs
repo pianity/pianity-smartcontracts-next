@@ -20,12 +20,13 @@ pub struct Transfer {
     pub qty: Balance,
 }
 
-#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
     pub super_operators: Option<Vec<String>>,
     pub operators: Option<Vec<String>>,
     pub proxies: Option<Vec<String>>,
+    pub paused: Option<bool>,
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]

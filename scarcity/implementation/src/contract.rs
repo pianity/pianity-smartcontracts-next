@@ -1,7 +1,7 @@
 use async_recursion::async_recursion;
 
 use warp_scarcity::{
-    action::{Action, ActionResult},
+    action::{Action, ActionResult, Configure},
     error::ContractError,
     state::State,
 };
@@ -21,8 +21,14 @@ pub async fn handle(
     action: Action,
     foreign_caller: &mut ForeignContractCaller,
 ) -> ActionResult {
-    // let original_caller = Transaction::owner();
     let direct_caller = SmartWeave::caller();
+
+    if state.settings.paused
+        && std::mem::discriminant(&action)
+            != std::mem::discriminant(&Action::Configure(Configure::default()))
+    {
+        return Err(ContractError::ContractIsPaused);
+    }
 
     // NOTE: Currently, only Pianity is allowed to transfer NFTs
     if !is_op(&state, &direct_caller) && !is_super_op(&state, &direct_caller) {
