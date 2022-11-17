@@ -34,6 +34,7 @@ import {
     generateWallet,
     expectOk,
     expectError,
+    Interactor,
 } from "@/utils";
 
 let arlocal: Arlocal;
@@ -44,11 +45,11 @@ let user: Wallet;
 
 let erc1155Contract: Contract<Erc1155State, Erc1155Error>;
 let erc1155TxId: string;
-let erc1155Interact: ReturnType<typeof createInteractor<Erc1155Action, Erc1155State, Erc1155Error>>;
+let erc1155Interact: Interactor<Erc1155Action, Erc1155Error>;
 
 let shuffleContract: Contract<ShuffleState, ShuffleError>;
 let shuffleTxId: string;
-let shuffleInteract: ReturnType<typeof createInteractor<ShuffleAction, ShuffleState, ShuffleError>>;
+let shuffleInteract: Interactor<ShuffleAction, ShuffleError>;
 
 const nftPrice = 10 * UNIT;
 const nftRate = 0.1 * UNIT;
@@ -85,7 +86,10 @@ beforeAll(async () => {
             operators: [],
             proxies: [],
             allowFreeTransfer: true,
+            paused: false,
         },
+        defaultToken: "DOL",
+        tickerNonce: 0,
         tokens: {
             DOL: {
                 ticker: "DOL",
@@ -125,15 +129,12 @@ beforeAll(async () => {
             ignoreExceptions: false,
         })
         .connect(op.jwk);
-    erc1155Interact = createInteractor<Erc1155Action, Erc1155State, Erc1155Error>(
-        warp,
-        erc1155Contract,
-        op.jwk,
-    );
+    erc1155Interact = createInteractor<Erc1155Action, Erc1155Error>(warp, erc1155Contract, op.jwk);
 
     const shuffleInitState: ShuffleState = {
         name: "TEST-SHUFFLES",
         settings: {
+            paused: false,
             superOperators: [op.address],
             operators: [],
             erc1155: erc1155TxId,
@@ -155,14 +156,9 @@ beforeAll(async () => {
             ignoreExceptions: false,
         })
         .connect(op.jwk);
-    shuffleInteract = createInteractor<ShuffleAction, ShuffleState, ShuffleError>(
-        warp,
-        shuffleContract,
-        op.jwk,
-        {
-            vrf: true,
-        },
-    );
+    shuffleInteract = createInteractor<ShuffleAction, ShuffleError>(warp, shuffleContract, op.jwk, {
+        vrf: true,
+    });
 
     console.log(
         "OP:",
@@ -196,7 +192,7 @@ it("should mint a shuffle", async () => {
         nfts: { legendary: ["UNIQUE-NFT", "LEGENDARY-NFT"] },
     });
 
-    expectOk(interaction?.type);
+    expectOk(interaction);
 
     const { state } = (await erc1155Contract.readState()).cachedValue;
     expect(state.tokens[`SHUFFLE-${interaction.originalTxId}`]).toBeDefined();
@@ -211,10 +207,6 @@ it("should return error when minting a shuffle for the same nfts twice", async (
     });
 
     const shuffleTicker = "WHALE";
-    const expectedError: ShuffleError = {
-        kind: "NftAlreadyInAShuffle",
-        data: [`SHUFFLE-${shuffleTicker}`, uniqueTicker],
-    };
 
     const interaction = await shuffleInteract({
         function: "batch",
@@ -222,7 +214,7 @@ it("should return error when minting a shuffle for the same nfts twice", async (
             {
                 function: "mintShuffle",
                 nfts: { legendary: [uniqueTicker, legendaryTicker] },
-                ticker: shuffleTicker,
+                baseId: shuffleTicker,
             },
             {
                 function: "mintShuffle",
@@ -231,8 +223,10 @@ it("should return error when minting a shuffle for the same nfts twice", async (
         ],
     });
 
-    expectError(interaction?.type);
-    expect(interaction?.error).toEqual(expectedError);
+    expectError(interaction, {
+        kind: "NftAlreadyInAShuffle",
+        data: [`SHUFFLE-${shuffleTicker}`, uniqueTicker],
+    });
 }, 10_000);
 
 it("should mint shuffles and open all of them", async () => {
@@ -246,7 +240,7 @@ it("should mint shuffles and open all of them", async () => {
     const shuffleTicker = "FISH";
     await shuffleInteract({
         function: "mintShuffle",
-        ticker: shuffleTicker,
+        baseId: shuffleTicker,
         nfts: { legendary: [uniqueTicker, legendaryTicker] },
     });
 
@@ -256,7 +250,7 @@ it("should mint shuffles and open all of them", async () => {
             {
                 function: "mint",
                 qty: "1",
-                ticker: `SHUFFLE-${shuffleTicker}`,
+                baseId: `SHUFFLE-${shuffleTicker}`,
             },
             {
                 function: "transfer",
@@ -278,7 +272,7 @@ it("should mint shuffles and open all of them", async () => {
         },
         { strict: false },
     );
-    expectOk(validReveals?.type);
+    expectOk(validReveals);
 
     const invalidReveal = await shuffleInteract(
         {
@@ -288,7 +282,7 @@ it("should mint shuffles and open all of them", async () => {
         },
         { strict: false },
     );
-    expectOk(invalidReveal?.type);
+    expectOk(invalidReveal);
 
     const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
     expect(erc1155State.tokens[`SHUFFLE-${shuffleTicker}`].balances[user.address]).toEqual("1");
