@@ -67,11 +67,11 @@ pub struct Settings {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct State {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub name: String,
 
     pub settings: Settings,
 
+    pub default_token: String,
     pub tokens: HashMap<String, Token>,
     pub approvals: HashMap<String, Approvals>,
 

@@ -7,7 +7,7 @@ use crate::state::{Balance, BalancePrecision, State};
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct BalanceOf {
-    pub token_id: String,
+    pub token_id: Option<String>,
     pub target: String,
 }
 
@@ -16,7 +16,7 @@ pub struct BalanceOf {
 pub struct Transfer {
     pub from: Option<String>,
     pub to: String,
-    pub token_id: String,
+    pub token_id: Option<String>,
     pub qty: Balance,
 }
 
@@ -40,7 +40,7 @@ pub struct Mint {
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Burn {
-    pub token_id: String,
+    pub token_id: Option<String>,
     pub qty: Balance,
     pub owner: Option<String>,
 }
