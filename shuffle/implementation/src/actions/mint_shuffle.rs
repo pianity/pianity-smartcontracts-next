@@ -85,7 +85,7 @@ impl AsyncActionable for MintShuffle {
         let shuffle_id = format!(
             "{}-{}",
             prefix,
-            self.ticker.clone().unwrap_or_else(Transaction::id)
+            self.base_id.clone().unwrap_or_else(Transaction::id)
         );
 
         state.shuffles.insert(
@@ -97,7 +97,7 @@ impl AsyncActionable for MintShuffle {
         );
 
         let erc1155_mint = Erc1155Action::Action::Mint(Erc1155Action::Mint {
-            ticker: self.ticker,
+            base_id: self.base_id,
             prefix: Some(prefix.to_string()),
             qty: Balance::new(total_editions),
         });

@@ -7,15 +7,15 @@ use warp_erc1155::{
 };
 
 use warp_scarcity::{
-    action::{ActionResult, AttachFee, HandlerResult, MintNft},
+    action::{ActionResult, AttachRoyalties, HandlerResult, MintNft},
     error::ContractError,
     state::State,
 };
 
-use crate::actions::AsyncActionable;
-use crate::contract_utils::{foreign_call::ForeignContractCaller, js_imports::Transaction};
-
-use super::attach_fee_internal;
+use crate::{
+    actions::{attach_royalties::attach_royalties_internal, AsyncActionable},
+    contract_utils::{foreign_call::ForeignContractCaller, js_imports::Transaction},
+};
 
 #[async_trait(?Send)]
 impl AsyncActionable for MintNft {
@@ -34,13 +34,13 @@ impl AsyncActionable for MintNft {
             warp_scarcity::action::Scarcity::Rare => ("RARE", 1000),
         };
 
-        let nft_base_id = self.ticker.clone().unwrap_or_else(Transaction::id);
+        let nft_base_id = self.base_id.clone().unwrap_or_else(Transaction::id);
 
-        attach_fee_internal(
-            &AttachFee {
+        attach_royalties_internal(
+            &AttachRoyalties {
                 base_id: nft_base_id.clone(),
                 rate: self.rate,
-                fees: self.fees.clone(),
+                royalties: self.royalties.clone(),
             },
             &mut state,
         )?;
@@ -49,7 +49,7 @@ impl AsyncActionable for MintNft {
             let prefix = format!("{}-{}", edition + 1, scarcity_name);
 
             mints.push(Erc1155Action::Action::Mint(Erc1155Action::Mint {
-                ticker: Some(nft_base_id.clone()),
+                base_id: Some(nft_base_id.clone()),
                 prefix: Some(prefix),
                 qty: Balance::new(1),
             }));

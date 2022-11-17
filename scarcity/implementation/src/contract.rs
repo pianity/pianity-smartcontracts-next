@@ -1,17 +1,17 @@
 use async_recursion::async_recursion;
 
 use warp_scarcity::{
-    action::{Action, ActionResult},
+    action::{Action, ActionResult, Configure},
     error::ContractError,
     state::State,
 };
 
-use crate::contract_utils::{
-    foreign_call::ForeignContractCaller,
-    js_imports::{log, Block, Contract, SmartWeave, Transaction},
-};
 use crate::{
     actions::{self, Actionable, AsyncActionable},
+    contract_utils::{
+        foreign_call::ForeignContractCaller,
+        js_imports::{log, Block, Contract, SmartWeave, Transaction},
+    },
     utils::{is_op, is_super_op},
 };
 
@@ -21,8 +21,14 @@ pub async fn handle(
     action: Action,
     foreign_caller: &mut ForeignContractCaller,
 ) -> ActionResult {
-    // let original_caller = Transaction::owner();
     let direct_caller = SmartWeave::caller();
+
+    if state.settings.paused
+        && std::mem::discriminant(&action)
+            != std::mem::discriminant(&Action::Configure(Configure::default()))
+    {
+        return Err(ContractError::ContractIsPaused);
+    }
 
     // NOTE: Currently, only Pianity is allowed to transfer NFTs
     if !is_op(&state, &direct_caller) && !is_super_op(&state, &direct_caller) {
@@ -30,7 +36,8 @@ pub async fn handle(
     }
 
     match action {
-        Action::AttachFee(action) => action.action(direct_caller, state, foreign_caller).await,
+        Action::AttachRoyalties(action) => action.action(direct_caller, state),
+        Action::EditAttachedRoyalties(action) => action.action(direct_caller, state),
         Action::Transfer(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Configure(action) => action.action(direct_caller, state),
         Action::Evolve(action) => action.action(direct_caller, state),

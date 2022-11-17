@@ -30,11 +30,11 @@ impl Actionable for Transfer {
             return Err(ContractError::TransferFromAndToCannotBeEqual);
         }
 
-        let token = if let Some(token) = state.tokens.get_mut(&self.token_id) {
-            token
-        } else {
-            return Err(ContractError::TokenNotFound(self.token_id));
-        };
+        let token_id = self.token_id.as_ref().unwrap_or(&state.default_token);
+        let token = state
+            .tokens
+            .get_mut(token_id)
+            .ok_or_else(|| ContractError::TokenNotFound(token_id.clone()))?;
 
         // Checking if caller has enough funds
         let from_balance = *token.balances.get(&from).unwrap_or(&Balance::new(0));

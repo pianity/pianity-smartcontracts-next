@@ -56,4 +56,6 @@ pub enum ContractError {
     NoNftAvailable(String),
 
     BoostCapExceeded,
+
+    ContractIsPaused,
 }

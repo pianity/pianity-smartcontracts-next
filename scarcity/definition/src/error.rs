@@ -35,7 +35,7 @@ pub enum ContractError {
     UnauthorizedAddress(String),
     UnauthorizedTransfer(String),
 
-    InvalidFee,
+    InvalidRoyalties,
     InvalidRate,
 
     TokenOwnerNotFound,
@@ -50,4 +50,6 @@ pub enum ContractError {
     Erc1155ReadFailed,
     Erc1155Error(ForeignWriteError<warp_erc1155::error::ContractError>),
     InvalidNftId(String),
+
+    ContractIsPaused,
 }

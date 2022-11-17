@@ -1,6 +1,7 @@
 use async_recursion::async_recursion;
 
-use warp_erc1155::action::{Action, ActionResult};
+use warp_erc1155::action::{Action, ActionResult, Configure};
+use warp_erc1155::error::ContractError;
 use warp_erc1155::state::State;
 
 use crate::actions::{Actionable, *};
@@ -10,6 +11,13 @@ use crate::contract_utils::js_imports::{SmartWeave, Transaction};
 pub async fn handle(state: State, action: Action) -> ActionResult {
     let original_caller = Transaction::owner();
     let direct_caller = SmartWeave::caller();
+
+    if state.settings.paused
+        && std::mem::discriminant(&action)
+            != std::mem::discriminant(&Action::Configure(Configure::default()))
+    {
+        return Err(ContractError::ContractIsPaused);
+    }
 
     let effective_caller = if state.settings.proxies.contains(&direct_caller) {
         original_caller

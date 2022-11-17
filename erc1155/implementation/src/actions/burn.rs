@@ -1,13 +1,8 @@
-use std::collections::HashMap;
-
 use warp_erc1155::action::{ActionResult, Burn, HandlerResult};
 use warp_erc1155::error::ContractError;
-use warp_erc1155::state::{Balance, State, Token};
+use warp_erc1155::state::State;
 
-use crate::contract_utils::js_imports::{log, Transaction};
-use crate::utils::is_op;
-
-use super::Actionable;
+use crate::{actions::Actionable, utils::is_op};
 
 impl Actionable for Burn {
     fn action(self, caller: String, mut state: State) -> ActionResult {
@@ -21,10 +16,12 @@ impl Actionable for Burn {
             caller
         };
 
-        let balances = if let Some(token) = state.tokens.get_mut(&self.token_id) {
+        let token_id = self.token_id.as_ref().unwrap_or(&state.default_token);
+
+        let balances = if let Some(token) = state.tokens.get_mut(token_id) {
             &mut token.balances
         } else {
-            return Err(ContractError::TokenNotFound(self.token_id));
+            return Err(ContractError::TokenNotFound(token_id.clone()));
         };
 
         let owner_balance = if let Some(balance) = balances.get_mut(&owner) {
@@ -39,7 +36,7 @@ impl Actionable for Burn {
             balances.remove(&owner);
 
             if balances.len() == 0 {
-                state.tokens.remove(&self.token_id);
+                state.tokens.remove(token_id);
             }
         } else {
             owner_balance.value -= self.qty.value;

@@ -1,74 +1,89 @@
-use crate::contract_utils::js_imports::SmartWeave;
-use serde::de::DeserializeOwned;
+use std::collections::HashMap;
+
 use serde::Serialize;
-use warp_lock::error::ForeignWriteError;
-use wasm_bindgen::{JsValue, UnwrapThrowExt};
+use serde::{de::DeserializeOwned, Deserialize};
+use wasm_bindgen::JsValue;
 
-use super::js_imports::log;
+use warp_lock::error::{ForeignReadError, ForeignWriteError};
 
-pub async fn read_foreign_contract_state<T: DeserializeOwned>(contract_address: &String) -> T {
-    let state: T = SmartWeave::read_contract_state(contract_address)
-        .await
-        .into_serde()
-        .unwrap(); // TODO: not sure if it won't case panics. Maybe it's better to return Result<T, ContractError>
+use crate::contract_utils::js_imports::SmartWeave;
 
-    return state;
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ForeignContractState {
+    Erc1155(warp_erc1155::state::State),
 }
 
-// #[derive(Debug)]
-// pub enum ForeignWriteError<T: DeserializeOwned + std::fmt::Debug> {
-//     ContractError(T),
-//     ParseError(serde_json::Error),
-// }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResultOk {
+    state: ForeignContractState,
+}
 
-// impl<T: DeserializeOwned + std::fmt::Debug> std::fmt::Display for ForeignWriteError<T> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//         match *self {
-//             Self::ContractError(_) => write!(f, "please use a vector with at least one element"),
-//             // The wrapped error contains additional information and is available
-//             // via the source() method.
-//             Self::ParseError(_) => write!(f, "the provided string could not be parsed as int"),
-//         }
-//     }
-// }
-//
-// impl<T: DeserializeOwned + std::fmt::Debug> std::error::Error for ForeignWriteError<T> {
-//     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-//         match *self {
-//             Self::ContractError(_) => None,
-//             // The cause is the underlying implementation error type. Is implicitly
-//             // cast to the trait object `&error::Error`. This works because the
-//             // underlying type already implements the `Error` trait.
-//             Self::ParseError(ref e) => Some(e),
-//         }
-//     }
-// }
-//
-// impl<T: DeserializeOwned + std::fmt::Debug> From<serde_json::Error> for ForeignWriteError<T> {
-//     fn from(err: serde_json::Error) -> ForeignWriteError<T> {
-//         ForeignWriteError::ParseError(err)
-//     }
-// }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResultError<ERROR> {
+    error: ERROR,
+}
 
-pub async fn write_foreign_contract<
-    RESULT: DeserializeOwned + std::fmt::Debug,
-    ERROR: Serialize + DeserializeOwned + std::fmt::Debug,
-    INPUT: Serialize,
->(
-    contract_address: &String,
-    input: INPUT,
-) -> Result<RESULT, ForeignWriteError<ERROR>> {
-    let input = JsValue::from_serde(&input).unwrap();
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum ForeignCallResult<ERROR> {
+    Ok(ResultOk),
+    Error(ResultError<ERROR>),
+}
 
-    SmartWeave::write(contract_address, input)
-        .await
-        .map_err(|err| {
-            let into_serde: ForeignWriteError<ERROR> = match err.into_serde::<ERROR>() {
-                Ok(contract_error) => ForeignWriteError::ContractError(contract_error),
-                Err(_serde_error) => ForeignWriteError::ParseError,
-            };
+#[derive(Debug, Serialize, Deserialize)]
+struct InternalWriteResult {
+    #[serde(rename = "type")]
+    result_type: String,
+    state: ForeignContractState,
+}
 
-            into_serde
-        })
-        .map(|result| result.into_serde().unwrap())
+pub struct ForeignContractCaller {
+    states: HashMap<String, ForeignContractState>,
+}
+
+impl ForeignContractCaller {
+    pub fn new() -> Self {
+        Self {
+            states: HashMap::new(),
+        }
+    }
+
+    pub async fn read(
+        &mut self,
+        contract_address: &String,
+    ) -> Result<&ForeignContractState, ForeignReadError> {
+        if !self.states.contains_key(contract_address) {
+            let state = SmartWeave::read_contract_state(contract_address)
+                .await
+                .into_serde()
+                .map_err(|_err| ForeignReadError::ParseError)?;
+
+            self.states.insert(contract_address.to_string(), state);
+        }
+
+        Ok(self.states.get(contract_address).unwrap())
+    }
+
+    pub async fn write<ERROR: Serialize + DeserializeOwned + std::fmt::Debug, INPUT: Serialize>(
+        &mut self,
+        contract_address: &String,
+        input: INPUT,
+    ) -> Result<&ForeignContractState, ForeignWriteError<ERROR>> {
+        let input = JsValue::from_serde(&input).unwrap();
+
+        let result = SmartWeave::write(contract_address, input)
+            .await
+            .into_serde::<ForeignCallResult<ERROR>>()
+            .map_err(|_err| ForeignWriteError::ParseError)?;
+
+        match result {
+            ForeignCallResult::Ok(state) => {
+                self.states
+                    .insert(contract_address.to_string(), state.state);
+                Ok(self.states.get(contract_address).unwrap())
+            }
+            ForeignCallResult::Error(error) => Err(ForeignWriteError::ContractError(error.error)),
+        }
+    }
 }

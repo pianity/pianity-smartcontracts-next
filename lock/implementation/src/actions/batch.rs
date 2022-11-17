@@ -5,13 +5,18 @@ use warp_lock::{
     state::State,
 };
 
-use crate::contract::handle;
+use crate::{contract::handle, contract_utils::foreign_call::ForeignContractCaller};
 
 use super::AsyncActionable;
 
 #[async_trait(?Send)]
 impl AsyncActionable for Batch {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
+    async fn action(
+        self,
+        _caller: String,
+        mut state: State,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
         let mut results: Vec<ReadResponse> = Vec::new();
 
         let mut read_mode = false;
@@ -22,7 +27,7 @@ impl AsyncActionable for Batch {
                 return Err(ContractError::ForbiddenNestedBatch);
             }
 
-            state = match handle(state, action).await? {
+            state = match handle(state, action, foreign_caller).await? {
                 HandlerResult::Write(state) => {
                     write_mode = true;
 

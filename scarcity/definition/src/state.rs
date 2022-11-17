@@ -4,20 +4,19 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // TODO: Find a way to export `UNIT` via schemars or put it in `Settings`.
-/// The exact amount that all the sum of all the fees of a token must be equal to.
+/// The exact amount that all the sum of all the royalties of a token must be equal to.
 pub const UNIT: u32 = 1_000_000;
 
 /**
  * address -> share
  */
-pub type Fees = HashMap<String, u32>;
-// pub type Fees = Vec<(String, u32)>;
+pub type Royalties = HashMap<String, u32>;
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct AttachedFee {
+pub struct AttachedRoyalties {
     pub base_id: String,
-    pub fees: Fees,
+    pub royalties: Royalties,
     pub rate: u32,
     // NOTE: The following will only be necessary when artists will be allowed to mint instead of
     // Pianity. At the moment Pianity is acting as the custodian so we can just check for the
@@ -37,6 +36,8 @@ pub struct AttachedFee {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub paused: bool,
+
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
 
@@ -50,9 +51,6 @@ pub struct Settings {
     /// It is required in order to, for example, determine whether a transfer represents a sell or
     /// a resell.
     pub custodian: String,
-
-    /// Token ID of the token used for paying
-    pub exchange_token: String,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
@@ -62,7 +60,7 @@ pub struct State {
 
     pub settings: Settings,
 
-    pub attached_fees: HashMap<String, AttachedFee>,
+    pub all_attached_royalties: HashMap<String, AttachedRoyalties>,
 
     pub evolve: Option<String>,
     pub can_evolve: Option<bool>,

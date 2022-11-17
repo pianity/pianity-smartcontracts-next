@@ -8,9 +8,9 @@ use warp_erc1155::{
 };
 
 use warp_scarcity::{
-    action::{ActionResult, AttachFee, HandlerResult, Transfer},
+    action::{ActionResult, AttachRoyalties, HandlerResult, Transfer},
     error::ContractError,
-    state::{AttachedFee, Fees, State, UNIT},
+    state::{AttachedRoyalties, Royalties, State, UNIT},
 };
 use wasm_bindgen::UnwrapThrowExt;
 
@@ -60,10 +60,10 @@ impl AsyncActionable for Transfer {
             _ => Err(ContractError::InvalidTokenId),
         }?;
 
-        let fee = state
-            .attached_fees
+        let attached_royalties = state
+            .all_attached_royalties
             .get(&base_id)
-            // TODO: Rename TokenNotFound to NoFeeAttached
+            // TODO: Rename TokenNotFound to NoRoyaltiesAttached
             .ok_or_else(|| ContractError::TokenNotFound(self.token_id.clone()))?;
 
         // let nft_owner =
@@ -73,7 +73,11 @@ impl AsyncActionable for Transfer {
 
         let is_resell = self.from != state.settings.custodian;
 
-        let rate = if is_resell { fee.rate } else { UNIT };
+        let rate = if is_resell {
+            attached_royalties.rate
+        } else {
+            UNIT
+        };
 
         let mut transfers: Vec<Erc1155Action::Transfer> = Vec::new();
 
@@ -83,31 +87,34 @@ impl AsyncActionable for Transfer {
                 transfers.push(Erc1155Action::Transfer {
                     from: Some(self.to.clone()),
                     to: token_owner.clone(),
-                    token_id: state.settings.exchange_token.clone(),
+                    token_id: None,
                     qty: Balance::new(self.price.value * (rate / UNIT) as BalancePrecision),
                 });
             }
 
             // Pay the share holders.
-            fee.fees.iter().for_each(|(address, share)| {
-                let fee_amount = (self.price.value as f32
-                    * (*share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
-                    as BalancePrecision;
+            attached_royalties
+                .royalties
+                .iter()
+                .for_each(|(address, royalty_share)| {
+                    let royalty_amount = (self.price.value as f32
+                        * (*royalty_share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
+                        as BalancePrecision;
 
-                transfers.push(Erc1155Action::Transfer {
-                    from: Some(self.to.clone()),
-                    to: address.clone(),
-                    token_id: state.settings.exchange_token.clone(),
-                    qty: Balance::new(fee_amount),
+                    transfers.push(Erc1155Action::Transfer {
+                        from: Some(self.to.clone()),
+                        to: address.clone(),
+                        token_id: None,
+                        qty: Balance::new(royalty_amount),
+                    });
                 });
-            });
         }
 
         // Transfer the token.
         transfers.push(Erc1155Action::Transfer {
             from: Some(token_owner),
             to: self.to.clone(),
-            token_id: self.token_id,
+            token_id: Some(self.token_id),
             qty: Balance::new(1),
         });
 

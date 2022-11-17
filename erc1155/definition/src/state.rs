@@ -58,20 +58,25 @@ pub struct Token {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub paused: bool,
+
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
+
     pub proxies: Vec<String>,
+
     pub allow_free_transfer: bool,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct State {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub name: String,
 
     pub settings: Settings,
 
+    pub default_token: String,
+    pub ticker_nonce: u64,
     pub tokens: HashMap<String, Token>,
     pub approvals: HashMap<String, Approvals>,
 

@@ -1,58 +1,50 @@
-use async_trait::async_trait;
-
 use warp_scarcity::{
-    action::{ActionResult, AttachFee, HandlerResult},
+    action::{ActionResult, AttachRoyalties, HandlerResult},
     error::ContractError,
-    state::{AttachedFee, State, UNIT},
+    state::{AttachedRoyalties, State, UNIT},
 };
 
-use crate::{
-    actions::AsyncActionable,
-    contract_utils::foreign_call::{ForeignContractCaller, ForeignContractState},
-    utils::parse_token_id,
-};
+use crate::actions::Actionable;
 
-pub fn attach_fee_internal(attach_fee: &AttachFee, state: &mut State) -> Result<(), ContractError> {
-    if attach_fee.rate > UNIT {
+pub fn attach_royalties_internal(
+    attach_royalties: &AttachRoyalties,
+    state: &mut State,
+) -> Result<(), ContractError> {
+    if attach_royalties.rate > UNIT {
         return Err(ContractError::InvalidRate);
     }
 
-    // Check that the sum of all fees is equal to UNIT
-    let fees_sum = attach_fee
-        .fees
+    // Check that the sum of all royalties is equal to UNIT
+    let royalties_sum = attach_royalties
+        .royalties
         .iter()
-        .map(|(_, fee)| *fee)
-        .reduce(|sum, fee| sum + fee)
+        .map(|(_, royalty)| *royalty)
+        .reduce(|sum, royalty| sum + royalty)
         .unwrap_or(0);
 
-    if fees_sum != UNIT {
-        return Err(ContractError::InvalidFee);
+    if royalties_sum != UNIT {
+        return Err(ContractError::InvalidRoyalties);
     }
 
-    state.attached_fees.insert(
-        attach_fee.base_id.clone(),
-        AttachedFee {
-            base_id: attach_fee.base_id.clone(),
-            fees: attach_fee.fees.clone(),
-            rate: attach_fee.rate,
+    state.all_attached_royalties.insert(
+        attach_royalties.base_id.clone(),
+        AttachedRoyalties {
+            base_id: attach_royalties.base_id.clone(),
+            royalties: attach_royalties.royalties.clone(),
+            rate: attach_royalties.rate,
         },
     );
 
     Ok(())
 }
 
-#[async_trait(?Send)]
-impl AsyncActionable for AttachFee {
-    async fn action(
-        self,
-        _caller: String,
-        mut state: State,
-        foreign_caller: &mut ForeignContractCaller,
-    ) -> ActionResult {
-        if state.attached_fees.contains_key(&self.base_id) {
+impl Actionable for AttachRoyalties {
+    fn action(self, _caller: String, mut state: State) -> ActionResult {
+        if state.all_attached_royalties.contains_key(&self.base_id) {
             return Err(ContractError::TokenAlreadyExists(self.base_id));
         }
 
+        // TODO: remove me
         // let erc1155 = match foreign_caller
         //     .read(&state.settings.erc1155.to_string())
         //     .await
@@ -60,7 +52,6 @@ impl AsyncActionable for AttachFee {
         // {
         //     ForeignContractState::Erc1155(state) => state,
         // };
-
         // erc1155
         //     .tokens
         //     .iter()
@@ -83,7 +74,7 @@ impl AsyncActionable for AttachFee {
         //     //     Err(ContractError::TokenIsNotAnNFT(id.to_string()))
         //     // })?;
 
-        attach_fee_internal(&self, &mut state)?;
+        attach_royalties_internal(&self, &mut state)?;
 
         Ok(HandlerResult::Write(state))
     }

@@ -1,26 +1,20 @@
-use std::{collections::HashMap, ops::Range};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use warp_erc1155::{
-    action::{self as Erc1155Action},
-    error::ContractError as Erc1155ContractError,
-    state::{Balance, State as Erc1155State},
-};
+use warp_erc1155::{action as Erc1155Action, error::ContractError as Erc1155ContractError};
 
 use warp_lock::{
-    action::{ActionResult, HandlerResult, TransferLocked, Unlock},
+    action::{ActionResult, HandlerResult, Unlock},
     error::ContractError,
-    state::{LockedBalance, State, UNIT},
+    state::{LockedBalance, State},
 };
-use wasm_bindgen::UnwrapThrowExt;
 
-use crate::contract_utils::{foreign_call::read_foreign_contract_state, js_imports::log};
 use crate::{
-    actions::{Actionable, AsyncActionable},
+    actions::AsyncActionable,
     contract_utils::{
-        foreign_call::write_foreign_contract,
+        foreign_call::ForeignContractCaller,
         js_imports::{Block, Contract},
     },
 };
@@ -33,7 +27,12 @@ pub struct InternalWriteResult {
 
 #[async_trait(?Send)]
 impl AsyncActionable for Unlock {
-    async fn action(self, _caller: String, mut state: State) -> ActionResult {
+    async fn action(
+        self,
+        _caller: String,
+        mut state: State,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
         let lock_account = Contract::id();
 
         let current_block = Block::height() as u32;
@@ -68,7 +67,7 @@ impl AsyncActionable for Unlock {
                     Erc1155Action::Action::Transfer(Erc1155Action::Transfer {
                         from: Some(lock_account.clone()),
                         to: owner.clone(),
-                        token_id: locked_balance.token_id.clone(),
+                        token_id: Some(locked_balance.token_id.clone()),
                         qty: locked_balance.qty,
                     })
                 })
@@ -76,16 +75,13 @@ impl AsyncActionable for Unlock {
             .collect();
 
         if transfers.len() > 0 {
-            write_foreign_contract::<
-                InternalWriteResult,
-                Erc1155ContractError,
-                Erc1155Action::Action,
-            >(
-                &state.settings.erc1155,
-                Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
-            )
-            .await
-            .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+            foreign_caller
+                .write::<Erc1155ContractError, Erc1155Action::Action>(
+                    &state.settings.erc1155,
+                    Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
+                )
+                .await
+                .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
         }
 
         Ok(HandlerResult::Write(state))

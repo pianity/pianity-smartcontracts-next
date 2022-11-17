@@ -28,6 +28,10 @@ impl Actionable for Configure {
             state.settings.operators = operators;
         }
 
+        if let Some(paused) = self.paused {
+            state.settings.paused = paused;
+        }
+
         return Ok(HandlerResult::Write(state));
     }
 }
