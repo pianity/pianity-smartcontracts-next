@@ -21,7 +21,7 @@ function addActionsType(content: string): string {
  * const specificAction: Actions["specificAction"] = { function: "specificAction", foo: "bar" };
  * \`\`\`
  */
-type Actions = {
+export type Actions = {
     [K in Action["function"]]: Action & { function: K };
 };`
     );
