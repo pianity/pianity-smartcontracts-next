@@ -31,8 +31,7 @@ pub struct Configure {
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Mint {
-    // TODO: Ticker should be a shorter ID to display on exchanges
-    pub ticker: Option<String>,
+    pub base_id: Option<String>,
     pub prefix: Option<String>,
     pub qty: Balance,
 }

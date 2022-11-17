@@ -49,9 +49,6 @@ pub struct Settings {
     /// It is required in order to, for example, determine whether a transfer represents a sell or
     /// a resell.
     pub custodian: String,
-
-    /// Token ID of the token used for paying
-    pub exchange_token: String,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]

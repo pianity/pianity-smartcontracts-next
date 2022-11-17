@@ -1,23 +1,18 @@
-use std::{collections::HashMap, ops::Range};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use warp_erc1155::{
-    action::{self as Erc1155Action},
-    error::ContractError as Erc1155ContractError,
-    state::{Balance, State as Erc1155State},
-};
+use warp_erc1155::{action as Erc1155Action, error::ContractError as Erc1155ContractError};
 
 use warp_lock::{
-    action::{ActionResult, HandlerResult, TransferLocked, Unlock},
+    action::{ActionResult, HandlerResult, Unlock},
     error::ContractError,
-    state::{LockedBalance, State, UNIT},
+    state::{LockedBalance, State},
 };
-use wasm_bindgen::UnwrapThrowExt;
 
 use crate::{
-    actions::{Actionable, AsyncActionable},
+    actions::AsyncActionable,
     contract_utils::{
         foreign_call::ForeignContractCaller,
         js_imports::{Block, Contract},
@@ -72,7 +67,7 @@ impl AsyncActionable for Unlock {
                     Erc1155Action::Action::Transfer(Erc1155Action::Transfer {
                         from: Some(lock_account.clone()),
                         to: owner.clone(),
-                        token_id: locked_balance.token_id.clone(),
+                        token_id: Some(locked_balance.token_id.clone()),
                         qty: locked_balance.qty,
                     })
                 })

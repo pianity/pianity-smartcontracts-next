@@ -39,7 +39,7 @@ impl AsyncActionable for TransferLocked {
         let transfer = Erc1155Action::Action::Transfer(Erc1155Action::Transfer {
             from: Some(caller.clone()),
             to: lock_account.clone(),
-            token_id: self.token_id.clone(),
+            token_id: Some(self.token_id.clone()),
             qty: self.qty,
         });
 

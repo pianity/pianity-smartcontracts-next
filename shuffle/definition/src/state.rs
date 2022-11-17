@@ -6,9 +6,8 @@ use serde::{Deserialize, Serialize};
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 // TODO: These currently assumes that a base_id includes the scarcity (`scarcity-base_id`) when it
-// should not. Instead of accepting an array of base_ids that include the scarcity, it should only
-// accept a string representing only the base_id of the token and then deduce the full token id by
-// automatically prefixing the scarcity.
+// should not. It should assume that it doesn't include anything but the actual base_id and then
+// prefix it with the scarcity.
 pub enum ShuffleBaseIds {
     Legendary([String; 2]),
     Epic([String; 3]),

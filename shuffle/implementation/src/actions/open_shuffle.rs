@@ -185,14 +185,14 @@ impl AsyncActionable for OpenShuffle {
 
         let mut batch = vec![
             Erc1155Action::Action::Burn(Erc1155Action::Burn {
-                token_id: self.shuffle_id,
+                token_id: Some(self.shuffle_id),
                 owner: Some(owner.clone()),
                 qty: Balance::new(1),
             }),
             // TODO: Interact with the Scarcity contract to pay for the NFT. As it is now
             // (interacting directly with the ERC1155 contract), the royalties are bypassed.
             Erc1155Action::Action::Transfer(Erc1155Action::Transfer {
-                token_id: nft.to_string(),
+                token_id: Some(nft.to_string()),
                 from: None,
                 to: owner.clone(),
                 qty: Balance::new(1),
@@ -201,7 +201,7 @@ impl AsyncActionable for OpenShuffle {
 
         if boost_price.value > 0 {
             batch.push(Erc1155Action::Action::Transfer(Erc1155Action::Transfer {
-                token_id: state.settings.boost_token.clone(),
+                token_id: Some(state.settings.boost_token.clone()),
                 from: Some(owner),
                 to: state.settings.custodian.clone(),
                 qty: boost_price,

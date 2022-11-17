@@ -87,7 +87,7 @@ impl AsyncActionable for Transfer {
                 transfers.push(Erc1155Action::Transfer {
                     from: Some(self.to.clone()),
                     to: token_owner.clone(),
-                    token_id: state.settings.exchange_token.clone(),
+                    token_id: None,
                     qty: Balance::new(self.price.value * (rate / UNIT) as BalancePrecision),
                 });
             }
@@ -104,7 +104,7 @@ impl AsyncActionable for Transfer {
                     transfers.push(Erc1155Action::Transfer {
                         from: Some(self.to.clone()),
                         to: address.clone(),
-                        token_id: state.settings.exchange_token.clone(),
+                        token_id: None,
                         qty: Balance::new(royalty_amount),
                     });
                 });
@@ -114,7 +114,7 @@ impl AsyncActionable for Transfer {
         transfers.push(Erc1155Action::Transfer {
             from: Some(token_owner),
             to: self.to.clone(),
-            token_id: self.token_id,
+            token_id: Some(self.token_id),
             qty: Balance::new(1),
         });
 

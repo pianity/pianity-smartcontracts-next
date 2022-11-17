@@ -9,7 +9,7 @@ use crate::state::{ShuffleBaseIds, State};
 #[serde(rename_all = "camelCase")]
 pub struct MintShuffle {
     pub nfts: ShuffleBaseIds,
-    pub ticker: Option<String>,
+    pub base_id: Option<String>,
 }
 
 #[derive(JsonSchema, Default, Clone, Debug, Serialize, Deserialize)]

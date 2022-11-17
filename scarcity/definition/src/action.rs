@@ -61,7 +61,7 @@ impl ToString for Scarcity {
 #[serde(rename_all = "camelCase")]
 pub struct MintNft {
     pub scarcity: Scarcity,
-    pub ticker: Option<String>,
+    pub base_id: Option<String>,
     pub royalties: Royalties,
     pub rate: u32,
 }

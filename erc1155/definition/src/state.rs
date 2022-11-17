@@ -72,6 +72,7 @@ pub struct State {
     pub settings: Settings,
 
     pub default_token: String,
+    pub ticker_nonce: u64,
     pub tokens: HashMap<String, Token>,
     pub approvals: HashMap<String, Approvals>,
 

@@ -34,7 +34,7 @@ impl AsyncActionable for MintNft {
             warp_scarcity::action::Scarcity::Rare => ("RARE", 1000),
         };
 
-        let nft_base_id = self.ticker.clone().unwrap_or_else(Transaction::id);
+        let nft_base_id = self.base_id.clone().unwrap_or_else(Transaction::id);
 
         attach_royalties_internal(
             &AttachRoyalties {
@@ -49,7 +49,7 @@ impl AsyncActionable for MintNft {
             let prefix = format!("{}-{}", edition + 1, scarcity_name);
 
             mints.push(Erc1155Action::Action::Mint(Erc1155Action::Mint {
-                ticker: Some(nft_base_id.clone()),
+                base_id: Some(nft_base_id.clone()),
                 prefix: Some(prefix),
                 qty: Balance::new(1),
             }));
