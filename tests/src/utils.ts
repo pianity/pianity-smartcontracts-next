@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 
 import Arweave from "arweave";
 import { JWKInterface } from "arweave/node/lib/wallet";
-import { Contract, Warp, WriteInteractionOptions } from "warp-contracts";
+import {
+    Contract,
+    Warp,
+    WriteInteractionOptions,
+    WriteInteractionResponse,
+    WriteInteractionResponseFailure,
+    WriteInteractionResponseSuccess,
+} from "warp-contracts";
 import { expect } from "@jest/globals";
 
 import { State as Erc1155State } from "erc1155/State";
@@ -13,12 +20,29 @@ import { State as LockState } from "lock/State";
 
 export const UNIT = 1_000_000;
 
-export function expectOk(resultType: string | undefined): asserts resultType is "ok" {
-    expect(resultType).toEqual("ok");
+export function expectOk(
+    result: WriteInteractionResponse<unknown> | null,
+): asserts result is WriteInteractionResponseSuccess {
+    if (result?.type !== "ok") {
+        console.log("interaction is error:", JSON.stringify(result, undefined, 2));
+    }
+
+    expect(result?.type).toEqual("ok");
 }
 
-export function expectError(resultType: string | undefined): asserts resultType is "error" {
-    expect(resultType).toEqual("error");
+export function expectError<ERROR>(
+    result: WriteInteractionResponse<ERROR> | null,
+    expectedError?: ERROR,
+): asserts result is WriteInteractionResponseFailure<ERROR> {
+    if (result?.type !== "error") {
+        console.log("interaction is ok:", JSON.stringify(result, undefined, 2));
+    }
+
+    expect(result?.type).toEqual("error");
+
+    if (expectedError) {
+        expect((result as WriteInteractionResponseFailure<ERROR>).error).toEqual(expectedError);
+    }
 }
 
 type ContractName = "erc1155" | "scarcity" | "shuffle" | "lock";
@@ -52,12 +76,17 @@ export async function deployContract<T extends ContractName>(
     return deployment;
 }
 
-export function createInteractor<ACTION, STATE, ERROR>(
+export type Interactor<ACTION, ERROR> = (
+    interaction: ACTION,
+    options?: { wallet?: JWKInterface } & WriteInteractionOptions,
+) => Promise<WriteInteractionResponse<ERROR> | null>;
+
+export function createInteractor<ACTION, ERROR>(
     warp: Warp,
-    contract: Contract<STATE, ERROR>,
+    contract: Contract<unknown, ERROR>,
     defaultWallet: JWKInterface,
     defaultOptions: WriteInteractionOptions = {},
-) {
+): Interactor<ACTION, ERROR> {
     defaultOptions = { strict: true, ...defaultOptions };
 
     return async (

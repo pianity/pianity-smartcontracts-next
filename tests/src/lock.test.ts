@@ -4,12 +4,13 @@ import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 
 import { State as Erc1155State } from "erc1155/State";
+import { ContractError as Erc1155Error } from "erc1155/ContractError";
 import { Action as Erc1155Action } from "erc1155/Action";
 import { State as LockState } from "lock/State";
 import { Action as LockAction } from "lock/Action";
 import { ContractError as LockError } from "lock/ContractError";
 
-import { UNIT, deployContract, createInteractor } from "@/utils";
+import { UNIT, deployContract, createInteractor, Interactor } from "@/utils";
 
 let arlocal: Arlocal;
 let warp: Warp;
@@ -17,13 +18,13 @@ let warp: Warp;
 let op: Wallet;
 let user: Wallet;
 
-let erc1155Contract: Contract<Erc1155State>;
+let erc1155Contract: Contract<Erc1155State, Erc1155Error>;
 let erc1155TxId: string;
-let erc1155Interact: ReturnType<typeof createInteractor<Erc1155Action>>;
+let erc1155Interact: Interactor<Erc1155Action, Erc1155Error>;
 
-let lockContract: Contract<LockState>;
+let lockContract: Contract<LockState, LockError>;
 let lockTxId: string;
-let lockInteract: ReturnType<typeof createInteractor<LockAction>>;
+let lockInteract: Interactor<LockAction, LockError>;
 
 const nft1BaseId = "NFT-0";
 const nft1Id = `1-UNIQUE-${nft1BaseId}`;
@@ -53,7 +54,10 @@ beforeAll(async () => {
             operators: [],
             proxies: [],
             allowFreeTransfer: true,
+            paused: false,
         },
+        defaultToken: "DOL",
+        tickerNonce: 0,
         tokens: {
             DOL: {
                 ticker: "DOL",
@@ -72,10 +76,10 @@ beforeAll(async () => {
 
     erc1155TxId = (await deployContract(warp, op.jwk, "erc1155", erc1155InitState)).contractTxId;
     erc1155Contract = warp
-        .contract<Erc1155State>(erc1155TxId)
+        .contract<Erc1155State, Erc1155Error>(erc1155TxId)
         .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
         .connect(op.jwk);
-    erc1155Interact = createInteractor<Erc1155Action>(warp, erc1155Contract, op.jwk);
+    erc1155Interact = createInteractor<Erc1155Action, Erc1155Error>(warp, erc1155Contract, op.jwk);
 
     const lockInitState: LockState = {
         name: "TEST-LOCK",
@@ -83,17 +87,17 @@ beforeAll(async () => {
             superOperators: [op.address],
             operators: [],
             erc1155: erc1155TxId,
-            // custodian: op.address,
+            paused: false,
         },
         vault: {},
     };
 
     lockTxId = (await deployContract(warp, op.jwk, "lock", lockInitState)).contractTxId;
     lockContract = warp
-        .contract<LockState>(lockTxId)
+        .contract<LockState, LockError>(lockTxId)
         .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
         .connect(op.jwk);
-    lockInteract = createInteractor<LockAction>(warp, lockContract, op.jwk);
+    lockInteract = createInteractor<LockAction, LockError>(warp, lockContract, op.jwk);
 
     console.log(
         `OP: ${op.address}\nUSER: ${user.address}\nLOCK: ${lockTxId}\nERC1155: ${erc1155TxId}`,

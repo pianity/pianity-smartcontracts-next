@@ -13,7 +13,7 @@ import { State as ShuffleState } from "shuffle/State";
 import { Action as ShuffleAction } from "shuffle/Action";
 import { ContractError as ShuffleError } from "shuffle/ContractError";
 
-import { UNIT, deployContract, createInteractor, expectOk, expectError } from "@/utils";
+import { UNIT, deployContract, createInteractor, expectOk, expectError, Interactor } from "@/utils";
 
 let arlocal: Arlocal;
 let warp: Warp;
@@ -24,17 +24,15 @@ let shuffleBuyer: Wallet;
 
 let erc1155Contract: Contract<Erc1155State, Erc1155Error>;
 let erc1155TxId: string;
-let erc1155Interact: ReturnType<typeof createInteractor<Erc1155Action, Erc1155State, Erc1155Error>>;
+let erc1155Interact: Interactor<Erc1155Action, Erc1155Error>;
 
 let shuffleContract: Contract<ShuffleState, ShuffleError>;
 let shuffleTxId: string;
-let shuffleInteract: ReturnType<typeof createInteractor<ShuffleAction, ShuffleState, ShuffleError>>;
+let shuffleInteract: Interactor<ShuffleAction, ShuffleError>;
 
 let scarcityContract: Contract<ScarcityState, ScarcityError>;
 let scarcityTxId: string;
-let scarcityInteract: ReturnType<
-    typeof createInteractor<ScarcityAction, ScarcityState, ScarcityError>
->;
+let scarcityInteract: Interactor<ScarcityAction, ScarcityError>;
 
 const nft1BaseId = "NFT-0";
 const nft1Id = `1-UNIQUE-${nft1BaseId}`;
@@ -67,7 +65,10 @@ beforeAll(async () => {
             operators: [],
             proxies: [],
             allowFreeTransfer: true,
+            paused: false,
         },
+        defaultToken: "DOL",
+        tickerNonce: 0,
         tokens: {
             DOL: {
                 ticker: "DOL",
@@ -104,11 +105,7 @@ beforeAll(async () => {
         .contract<Erc1155State, Erc1155Error>(erc1155TxId)
         .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
         .connect(op.jwk);
-    erc1155Interact = createInteractor<Erc1155Action, Erc1155State, Erc1155Error>(
-        warp,
-        erc1155Contract,
-        op.jwk,
-    );
+    erc1155Interact = createInteractor<Erc1155Action, Erc1155Error>(warp, erc1155Contract, op.jwk);
 
     const shuffleInitState: ShuffleState = {
         name: "TEST-SHUFFLES",
@@ -120,6 +117,7 @@ beforeAll(async () => {
             boostCap: 1,
             boostPriceModifier: 1,
             boostToken: "DOL",
+            paused: false,
         },
         shuffles: {},
     };
@@ -132,14 +130,9 @@ beforeAll(async () => {
             ignoreExceptions: false,
         })
         .connect(op.jwk);
-    shuffleInteract = createInteractor<ShuffleAction, ShuffleState, ShuffleError>(
-        warp,
-        shuffleContract,
-        op.jwk,
-        {
-            vrf: true,
-        },
-    );
+    shuffleInteract = createInteractor<ShuffleAction, ShuffleError>(warp, shuffleContract, op.jwk, {
+        vrf: true,
+    });
 
     const scarcityInitState: ScarcityState = {
         name: "TEST-SCARCITY",
@@ -148,16 +141,16 @@ beforeAll(async () => {
             operators: [],
             erc1155: erc1155TxId,
             custodian: op.address,
-            exchangeToken: "DOL",
+            paused: false,
         },
-        attachedFees: {},
+        allAttachedRoyalties: {},
     };
     scarcityTxId = (await deployContract(warp, op.jwk, "scarcity", scarcityInitState)).contractTxId;
     scarcityContract = warp
         .contract<ScarcityState, ScarcityError>(scarcityTxId)
         .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
         .connect(op.jwk);
-    scarcityInteract = createInteractor<ScarcityAction, ScarcityState, ScarcityError>(
+    scarcityInteract = createInteractor<ScarcityAction, ScarcityError>(
         warp,
         scarcityContract,
         op.jwk,
@@ -194,7 +187,7 @@ it("should activate the Scarcity & the Shuffle contract on the Erc1155 one", asy
 it("should correctly pay fees to shareholders for shuffle", async () => {
     const mintNft = {
         function: "mintNft",
-        fees: { "share-holder-1": 500_000, "share-holder-2": 500_000 },
+        royalties: { "share-holder-1": 500_000, "share-holder-2": 500_000 },
         rate: 1_000_000,
     } as const;
 
@@ -212,7 +205,7 @@ it("should correctly pay fees to shareholders for shuffle", async () => {
         ],
     });
 
-    expectOk(nftMintInteraction?.type);
+    expectOk(nftMintInteraction);
 
     const mintShuffleInteraction = await shuffleInteract({
         function: "mintShuffle",
@@ -223,17 +216,15 @@ it("should correctly pay fees to shareholders for shuffle", async () => {
             ],
         },
     });
-    expectOk(mintShuffleInteraction?.type);
+    expectOk(mintShuffleInteraction);
 
     expectOk(
-        (
-            await scarcityInteract({
-                function: "attachFee",
-                fees: mintNft.fees,
-                rate: mintNft.rate,
-                baseId: mintShuffleInteraction.originalTxId,
-            })
-        )?.type,
+        await scarcityInteract({
+            function: "attachRoyalties",
+            royalties: mintNft.royalties,
+            rate: mintNft.rate,
+            baseId: mintShuffleInteraction.originalTxId,
+        }),
     );
 
     const transferInteraction = await scarcityInteract({
@@ -243,7 +234,7 @@ it("should correctly pay fees to shareholders for shuffle", async () => {
         tokenId: `SHUFFLE-${mintShuffleInteraction.originalTxId}`,
         price: `${100 * UNIT}`,
     });
-    expectOk(transferInteraction?.type);
+    expectOk(transferInteraction);
 
     const { state } = (await erc1155Contract.readState()).cachedValue;
     expect(state.tokens.DOL.balances["share-holder-1"]).toEqual("50000000");
@@ -263,9 +254,9 @@ it("should mint a free NFT and distribute it to a unknown address", async () => 
     await scarcityInteract({
         function: "mintNft",
         scarcity: "unique",
-        fees: { [op.address]: 1_000_000 },
+        royalties: { [op.address]: 1_000_000 },
         rate: 1_000_000,
-        ticker: nftBaseId,
+        baseId: nftBaseId,
     });
 
     await scarcityInteract({
@@ -281,22 +272,22 @@ it("should mint a free NFT and distribute it to a unknown address", async () => 
 });
 
 it("should attach fees to an NFT", async () => {
-    const fees: ScarcityState["attachedFees"][0] = {
+    const fees: ScarcityState["allAttachedRoyalties"][0] = {
         baseId: nft1BaseId,
-        fees: {
+        royalties: {
             [op.address]: UNIT,
         },
         rate: nftRate,
     };
 
     await scarcityInteract({
-        function: "attachFee",
+        function: "attachRoyalties",
         ...fees,
         baseId: nft1BaseId,
     });
 
     const { state } = (await scarcityContract.readState()).cachedValue;
-    expect(state.attachedFees[nft1BaseId]).toEqual(fees);
+    expect(state.allAttachedRoyalties[nft1BaseId]).toEqual(fees);
 });
 
 it("should return correct error type", async () => {
@@ -308,9 +299,7 @@ it("should return correct error type", async () => {
         price: `${opBaseBalance + UNIT}`,
     });
 
-    expectError(interaction?.type);
-
-    const notEnoughBalanceError: ScarcityError = {
+    expectError(interaction, {
         kind: "Erc1155Error",
         data: {
             kind: "ContractError",
@@ -319,9 +308,7 @@ it("should return correct error type", async () => {
                 data: user.address,
             },
         },
-    };
-
-    expect(interaction.error).toEqual(notEnoughBalanceError);
+    });
 });
 
 it("op should sell the NFT and pay the shareholders", async () => {
@@ -343,18 +330,18 @@ it("should mint nft", async () => {
     const interaction = await scarcityInteract({
         function: "mintNft",
         scarcity: "legendary",
-        fees: {
+        royalties: {
             [op.address]: UNIT,
         },
         rate: nftRate,
     });
 
-    expectOk(interaction?.type);
+    expectOk(interaction);
 
     const nftBaseId = interaction.originalTxId;
 
     const { state: scarcityState } = (await scarcityContract.readState()).cachedValue;
-    expect(scarcityState.attachedFees[nftBaseId]).toBeDefined();
+    expect(scarcityState.allAttachedRoyalties[nftBaseId]).toBeDefined();
 
     const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
 
@@ -372,15 +359,15 @@ it("should mint with a custom ticker", async () => {
     await scarcityInteract({
         function: "mintNft",
         scarcity: "legendary",
-        fees: {
+        royalties: {
             [op.address]: UNIT,
         },
         rate: nftRate,
-        ticker,
+        baseId: ticker,
     });
 
     const { state: scarcityState } = (await scarcityContract.readState()).cachedValue;
-    expect(scarcityState.attachedFees[ticker]).toBeDefined();
+    expect(scarcityState.allAttachedRoyalties[ticker]).toBeDefined();
 
     const { state: erc1155State } = (await erc1155Contract.readState()).cachedValue;
 

@@ -13,6 +13,7 @@ import {
     expectError,
     expectOk,
     generateWallet,
+    Interactor,
     range,
 } from "@/utils";
 
@@ -24,7 +25,7 @@ let user: Wallet;
 
 let contract: Contract<State, ContractError>;
 let contractId: string;
-let interact: ReturnType<typeof createInteractor<Action, State, ContractError>>;
+let interact: Interactor<Action, ContractError>;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
@@ -40,6 +41,7 @@ beforeAll(async () => {
     const initState: State = {
         name: "TEST-ERC1155",
         settings: {
+            paused: false,
             superOperators: [op.address],
             operators: [],
             proxies: [],
@@ -53,6 +55,8 @@ beforeAll(async () => {
                 },
             },
         },
+        defaultToken: "DOL",
+        tickerNonce: 0,
         approvals: {},
     };
 
@@ -61,13 +65,23 @@ beforeAll(async () => {
         .contract<State, ContractError>(contractId)
         .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
         .connect(op.jwk);
-    interact = createInteractor<Action, State, ContractError>(warp, contract, op.jwk);
+    interact = createInteractor<Action, ContractError>(warp, contract, op.jwk);
 
     console.log("OP:", op.address, "\nUSER:", user.address, "\nERC1155:", contractId);
 }, 25_000);
 
 afterAll(async () => {
     await arlocal.stop();
+});
+
+it("should not accept interactions when paused", async () => {
+    expectOk(await interact({ function: "configure", paused: true }));
+
+    expectError(await interact({ function: "balanceOf", target: "" }), {
+        kind: "ContractIsPaused",
+    });
+
+    expectOk(await interact({ function: "configure", paused: false }));
 });
 
 it("should transfer some tokens to user", async () => {
@@ -90,13 +104,12 @@ it("should mint an NFT", async () => {
         qty: "1",
     });
 
-    expectOk(mintResponse?.type);
+    expectOk(mintResponse);
 
     const tokenId = `NFT-${mintResponse?.originalTxId}`;
 
     const { state } = (await contract.readState()).cachedValue;
     expect(state.tokens[tokenId].balances[op.address]).toBe("1");
-    expect(state.tokens[tokenId].ticker).toBe(tokenId);
 });
 
 it("should burn an NFT", async () => {
@@ -106,14 +119,13 @@ it("should burn an NFT", async () => {
         qty: "1",
     });
 
-    expectOk(mintResponse?.type);
+    expectOk(mintResponse);
 
-    const tokenId = `NFT-${mintResponse?.originalTxId}`;
+    const tokenId = `NFT-${mintResponse.originalTxId}`;
 
     {
         const { state } = (await contract.readState()).cachedValue;
         expect(state.tokens[tokenId].balances[op.address]).toBe("1");
-        expect(state.tokens[tokenId].ticker).toBe(tokenId);
     }
 
     await interact({
@@ -133,14 +145,15 @@ it("should burn some tokens", async () => {
 
     const mintResponse = await interact({
         function: "mint",
-        ticker: tokenId,
+        baseId: tokenId,
         qty: "100",
     });
+
+    expectOk(mintResponse);
 
     {
         const { state } = (await contract.readState()).cachedValue;
         expect(state.tokens[tokenId].balances[op.address]).toBe("100");
-        expect(state.tokens[tokenId].ticker).toBe(tokenId);
         expect(calculateTotalQty(state.tokens[tokenId])).toBe("100");
     }
 
@@ -178,13 +191,10 @@ it("should throw when non-op try to burn tokens", async () => {
         { wallet: user.jwk },
     );
 
-    const expectedError: ContractError = {
+    expectError(burnInteraction, {
         kind: "UnauthorizedAddress",
         data: user.address,
-    };
-
-    expectError(burnInteraction?.type);
-    expect(burnInteraction.error).toEqual(expectedError);
+    });
 });
 
 it("publish an invalid interaction with strict:false and read the state", async () => {
@@ -197,7 +207,7 @@ it("publish an invalid interaction with strict:false and read the state", async 
         { wallet: user.jwk, strict: false },
     );
 
-    expectOk(interaction?.type);
+    expectOk(interaction);
 
     const state = (await contract.readState()).cachedValue;
 
