@@ -20,7 +20,7 @@ use crate::{
         foreign_call::{ForeignContractCaller, ForeignContractState},
         js_imports::log,
     },
-    utils::{parse_token_id, NftId, ShuffleId, TokenId},
+    utils::{NftId, ShuffleId, TokenId},
 };
 
 async fn get_token_owner(
@@ -54,7 +54,7 @@ impl AsyncActionable for Transfer {
         state: State,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
-        let base_id = match parse_token_id(&self.token_id) {
+        let base_id = match TokenId::from(self.token_id.as_ref()) {
             TokenId::Nft(NftId { base_id, .. }) => Ok(base_id),
             TokenId::Shuffle(ShuffleId { base_id }) => Ok(base_id),
             _ => Err(ContractError::InvalidTokenId),
