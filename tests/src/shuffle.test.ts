@@ -19,7 +19,7 @@ import { JWKInterface } from "arweave/node/lib/wallet";
 
 import { State as Erc1155State } from "erc1155/State";
 import { ContractError as Erc1155Error } from "erc1155/ContractError";
-import { Action as Erc1155Action } from "erc1155/Action";
+import { Action as Erc1155Action, Actions } from "erc1155/Action";
 import { State as ShuffleState } from "shuffle/State";
 import { Action as ShuffleAction } from "shuffle/Action";
 import { ContractError as ShuffleError } from "shuffle/ContractError";
@@ -61,7 +61,7 @@ function mintNfts(baseIds: string[]): Erc1155Action[] {
         range(editions * 10 || 1).map((i) => ({
             function: "mint",
             prefix: `${i + 1}`,
-            ticker: baseId,
+            baseId,
             qty: "1",
         })),
     );
@@ -201,12 +201,22 @@ it("should mint a shuffle", async () => {
 it("should return error when minting a shuffle for the same nfts twice", async () => {
     const uniqueTicker = "UNIQUE-WHALE_NFT";
     const legendaryTicker = "LEGENDARY-WHALE_NFT";
-    await erc1155Interact({
-        function: "batch",
-        actions: mintNfts([uniqueTicker, legendaryTicker]),
-    });
 
-    const shuffleTicker = "WHALE";
+    {
+        const interaction = await erc1155Interact({
+            function: "batch",
+            actions: mintNfts([uniqueTicker, legendaryTicker]),
+        });
+
+        expectOk(interaction);
+
+        console.log(
+            JSON.stringify((await erc1155Contract.readState()).cachedValue.state.tokens, null, 2),
+        );
+        console.log(JSON.stringify(interaction, null, 2));
+    }
+
+    const shuffleTicker = "WHALE_NFT";
 
     const interaction = await shuffleInteract({
         function: "batch",
