@@ -51,6 +51,7 @@ pub type Approvals = HashMap<String, bool>;
 #[serde(rename_all = "camelCase")]
 pub struct Token {
     pub ticker: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tx_id: Option<String>,
     pub balances: Balances,
 }
