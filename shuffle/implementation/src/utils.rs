@@ -3,8 +3,6 @@ use num_traits::ToPrimitive;
 use sha3::{Digest, Sha3_256};
 use warp_shuffle::state::{ShuffleBaseIds, State};
 
-use crate::contract_utils::js_imports::log;
-
 fn index_to_editions_count(n: usize) -> u32 {
     (0..n).fold(1, |acc, _| acc * 10)
 }
@@ -96,7 +94,7 @@ impl ToString for Scarcity {
 }
 
 pub struct NftId {
-    pub id: String,
+    pub base_id: String,
     pub scarcity: Scarcity,
     pub edition: u32,
 }
@@ -122,7 +120,7 @@ impl TryFrom<&str> for NftId {
             Err(())
         } else {
             Ok(NftId {
-                id: splited.2.to_string(),
+                base_id: splited.2.to_string(),
                 scarcity,
                 edition,
             })
@@ -132,7 +130,12 @@ impl TryFrom<&str> for NftId {
 
 impl ToString for NftId {
     fn to_string(&self) -> String {
-        format!("{}-{}-{}", self.edition, self.scarcity.to_string(), self.id)
+        format!(
+            "{}-{}-{}",
+            self.edition,
+            self.scarcity.to_string(),
+            self.base_id
+        )
     }
 }
 
@@ -152,7 +155,7 @@ pub fn splited_nft_id(id: &str) -> Option<NftId> {
         None
     } else {
         Some(NftId {
-            id: splited.2.to_string(),
+            base_id: splited.2.to_string(),
             scarcity,
             edition,
         })

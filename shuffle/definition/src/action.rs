@@ -2,8 +2,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use warp_erc1155::state::Balance;
 
-use crate::error::ContractError;
-use crate::state::{ShuffleBaseIds, State};
+use crate::{
+    error::ContractError,
+    state::{ShuffleBaseIds, State},
+};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

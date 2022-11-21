@@ -21,6 +21,7 @@ use crate::{
 };
 use crate::{contract_utils::js_imports::Transaction, utils::get_all_nfts_ids};
 
+// TODO: Do we actually want to check existence of NFTs to mint a shuffle?
 async fn verify_nfts(
     erc1155: &String,
     nfts: &ShuffleBaseIds,
