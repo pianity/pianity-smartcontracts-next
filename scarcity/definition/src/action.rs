@@ -57,6 +57,17 @@ impl ToString for Scarcity {
     }
 }
 
+impl From<&Scarcity> for u32 {
+    fn from(scarcity: &Scarcity) -> Self {
+        match scarcity {
+            Scarcity::Unique => 1,
+            Scarcity::Legendary => 10,
+            Scarcity::Epic => 100,
+            Scarcity::Rare => 1000,
+        }
+    }
+}
+
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MintNft {
