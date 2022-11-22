@@ -1,6 +1,6 @@
 {
     "name": "@pianity/erc1155",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Typescript types for the Erc1155 contract",
     "repository": {
         "type": "git",

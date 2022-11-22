@@ -22,9 +22,8 @@ export type ShuffleBaseIds =
     };
 
 export interface State {
-  canEvolve?: boolean | null;
   evolve?: string | null;
-  name?: string | null;
+  name: string;
   settings: Settings;
   shuffles: {
     [k: string]: Shuffle;
@@ -40,6 +39,7 @@ export interface Settings {
    * Id of the token used to boost shuffles luck
    */
   boostToken: string;
+  canEvolve: boolean;
   /**
    * NOTE: Currently only Pianity is allowed to do mints and transfers which means that ownership always defaults to Pianity. This field represents the address to which ownership always defaults in the ERC1155 contract.
    *

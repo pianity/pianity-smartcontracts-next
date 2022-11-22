@@ -1,6 +1,6 @@
 {
     "name": "@pianity/lock",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Typescript types for the Lock contract",
     "repository": {
         "type": "git",

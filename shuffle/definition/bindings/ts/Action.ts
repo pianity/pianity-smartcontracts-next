@@ -11,6 +11,12 @@ export type Action =
       shuffleId: string;
     }
   | {
+      boostCap?: number | null;
+      boostPriceModifier?: number | null;
+      boostToken?: string | null;
+      canEvolve?: boolean | null;
+      custodian?: string | null;
+      erc1155?: string | null;
       function: "configure";
       operators?: string[] | null;
       paused?: boolean | null;

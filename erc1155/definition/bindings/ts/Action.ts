@@ -12,6 +12,8 @@ export type Action =
       tokenId?: string | null;
     }
   | {
+      allowFreeTransfer?: boolean | null;
+      canEvolve?: boolean | null;
       function: "configure";
       operators?: string[] | null;
       paused?: boolean | null;

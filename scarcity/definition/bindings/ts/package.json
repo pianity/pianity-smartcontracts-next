@@ -1,6 +1,6 @@
 {
     "name": "@pianity/scarcity",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Typescript types for the Scarcity contract",
     "repository": {
         "type": "git",

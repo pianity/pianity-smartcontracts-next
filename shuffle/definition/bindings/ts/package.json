@@ -1,6 +1,6 @@
 {
     "name": "@pianity/shuffle",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Typescript types for the Shuffle contract",
     "repository": {
         "type": "git",

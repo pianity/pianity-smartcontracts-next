@@ -32,6 +32,9 @@ export type Action =
       tokenId: string;
     }
   | {
+      canEvolve?: boolean | null;
+      custodian?: string | null;
+      erc1155?: string | null;
       function: "configure";
       operators?: string[] | null;
       paused?: boolean | null;

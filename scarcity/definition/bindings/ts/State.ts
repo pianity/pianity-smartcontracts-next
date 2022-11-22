@@ -2,9 +2,8 @@ export interface State {
   allAttachedRoyalties: {
     [k: string]: AttachedRoyalties;
   };
-  canEvolve?: boolean | null;
   evolve?: string | null;
-  name?: string | null;
+  name: string;
   settings: Settings;
 }
 export interface AttachedRoyalties {
@@ -15,6 +14,7 @@ export interface AttachedRoyalties {
   };
 }
 export interface Settings {
+  canEvolve: boolean;
   /**
    * NOTE: Currently only Pianity is allowed to do mints and transfers which means that ownership always defaults to Pianity. This field represents the address to which ownership always defaults in the ERC1155 contract.
    *

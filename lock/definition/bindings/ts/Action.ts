@@ -10,6 +10,8 @@ export type Action =
       function: "unlock";
     }
   | {
+      canEvolve?: boolean | null;
+      erc1155?: string | null;
       function: "configure";
       operators?: string[] | null;
       paused?: boolean | null;

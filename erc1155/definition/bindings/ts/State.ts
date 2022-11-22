@@ -4,7 +4,6 @@ export interface State {
       [k: string]: boolean;
     };
   };
-  canEvolve?: boolean | null;
   defaultToken: string;
   evolve?: string | null;
   name: string;
@@ -16,6 +15,7 @@ export interface State {
 }
 export interface Settings {
   allowFreeTransfer: boolean;
+  canEvolve: boolean;
   operators: string[];
   paused: boolean;
   proxies: string[];

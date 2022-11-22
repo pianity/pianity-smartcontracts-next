@@ -1,13 +1,13 @@
 export interface State {
-  canEvolve?: boolean | null;
   evolve?: string | null;
-  name?: string | null;
+  name: string;
   settings: Settings;
   vault: {
     [k: string]: LockedBalance[];
   };
 }
 export interface Settings {
+  canEvolve: boolean;
   /**
    * Address of the attached ERC1155-compliant contract
    */
