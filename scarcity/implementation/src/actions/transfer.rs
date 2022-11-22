@@ -88,7 +88,9 @@ impl AsyncActionable for Transfer {
                     from: Some(self.to.clone()),
                     to: token_owner.clone(),
                     token_id: None,
-                    qty: Balance::new(self.price.value * (rate / UNIT) as BalancePrecision),
+                    qty: Balance::new(
+                        (self.price.value as f32 * (rate as f32 / UNIT as f32)) as BalancePrecision,
+                    ),
                 });
             }
 
