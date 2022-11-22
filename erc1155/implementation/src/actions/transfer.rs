@@ -2,6 +2,7 @@ use warp_erc1155::action::{ActionResult, HandlerResult, Transfer};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::{Balance, State};
 
+use crate::contract_utils::js_imports::log;
 use crate::utils::is_op;
 
 use super::{approval::is_approved_for_all_internal, Actionable};
@@ -18,8 +19,8 @@ impl Actionable for Transfer {
             caller.clone()
         };
 
-        if !state.settings.allow_free_transfer && !is_op(&state, &from) {
-            return Err(ContractError::UnauthorizedAddress(from));
+        if !state.settings.allow_free_transfer && !is_op(&state, &caller) {
+            return Err(ContractError::UnauthorizedAddress(caller));
         }
 
         if from != caller && !is_approved_for_all_internal(&state, &caller, &from) {

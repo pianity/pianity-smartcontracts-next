@@ -16,6 +16,7 @@ impl Actionable for Configure {
             || (self.super_operators.is_some() && !is_super_op)
             || (self.operators.is_some() && !is_super_op)
             || (self.can_evolve.is_some() && !is_super_op)
+            || (self.proxies.is_some() && !is_super_op)
         {
             return Err(ContractError::UnauthorizedConfiguration);
         }
