@@ -40,8 +40,14 @@ pub struct OpenShuffleBatch {
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
     pub paused: Option<bool>,
+    pub can_evolve: Option<bool>,
     pub super_operators: Option<Vec<String>>,
     pub operators: Option<Vec<String>>,
+    pub erc1155: Option<String>,
+    pub custodian: Option<String>,
+    pub boost_token: Option<String>,
+    pub boost_price_modifier: Option<f32>,
+    pub boost_cap: Option<f32>,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
