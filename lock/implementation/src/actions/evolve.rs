@@ -8,16 +8,13 @@ use super::Actionable;
 
 impl Actionable for Evolve {
     fn action(self, caller: String, mut state: State) -> ActionResult {
-        match state.can_evolve {
-            Some(can_evolve) => {
-                if can_evolve && is_super_op(&state, &caller) {
-                    state.evolve = Option::from(self.value);
-                    Ok(HandlerResult::Write(state))
-                } else {
-                    Err(ContractError::OnlyOwnerCanEvolve)
-                }
-            }
-            None => Err(ContractError::EvolveNotAllowed),
+        if !state.settings.can_evolve {
+            Err(ContractError::EvolveNotAllowed)
+        } else if !is_super_op(&state, &caller) {
+            Err(ContractError::OnlyOwnerCanEvolve)
+        } else {
+            state.evolve = Option::from(self.value);
+            Ok(HandlerResult::Write(state))
         }
     }
 }

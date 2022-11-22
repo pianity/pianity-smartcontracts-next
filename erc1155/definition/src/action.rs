@@ -27,6 +27,8 @@ pub struct Configure {
     pub operators: Option<Vec<String>>,
     pub proxies: Option<Vec<String>>,
     pub paused: Option<bool>,
+    pub can_evolve: Option<bool>,
+    pub allow_free_transfer: Option<bool>,
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]

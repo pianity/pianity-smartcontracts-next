@@ -12,8 +12,10 @@ impl Actionable for Configure {
         let is_super_op = is_super_op(&state, &caller);
         let is_op = is_op(&state, &caller);
 
-        if self.super_operators.is_some() && !is_super_op
-            || self.operators.is_some() && !is_super_op && (!is_super_op && is_op)
+        if !is_op
+            || (self.super_operators.is_some() && !is_super_op)
+            || (self.operators.is_some() && !is_super_op)
+            || (self.can_evolve.is_some() && !is_super_op)
         {
             return Err(ContractError::UnauthorizedConfiguration);
         }
@@ -26,12 +28,20 @@ impl Actionable for Configure {
             state.settings.operators = operators;
         }
 
+        if let Some(can_evolve) = self.can_evolve {
+            state.settings.can_evolve = can_evolve;
+        }
+
         if let Some(proxies) = self.proxies {
             state.settings.proxies = proxies;
         }
 
         if let Some(paused) = self.paused {
             state.settings.paused = paused;
+        }
+
+        if let Some(allow_free_transfer) = self.allow_free_transfer {
+            state.settings.allow_free_transfer = allow_free_transfer;
         }
 
         return Ok(HandlerResult::Write(state));

@@ -30,8 +30,10 @@ pub struct Unlock {}
 #[serde(rename_all = "camelCase")]
 pub struct Configure {
     pub paused: Option<bool>,
+    pub can_evolve: Option<bool>,
     pub super_operators: Option<Vec<String>>,
     pub operators: Option<Vec<String>>,
+    pub erc1155: Option<String>,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]

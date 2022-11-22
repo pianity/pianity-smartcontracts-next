@@ -60,6 +60,7 @@ pub struct Token {
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub paused: bool,
+    pub can_evolve: bool,
 
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
@@ -83,6 +84,4 @@ pub struct State {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evolve: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub can_evolve: Option<bool>,
 }

@@ -50,6 +50,7 @@ pub struct Shuffle {
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub paused: bool,
+    pub can_evolve: bool,
 
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
@@ -75,12 +76,12 @@ pub struct Settings {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct State {
-    pub name: Option<String>,
+    pub name: String,
 
     pub settings: Settings,
 
     pub shuffles: HashMap<String, Shuffle>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub evolve: Option<String>,
-    pub can_evolve: Option<bool>,
 }

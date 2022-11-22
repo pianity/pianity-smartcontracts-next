@@ -94,6 +94,7 @@ pub struct Configure {
     pub operators: Option<Vec<String>>,
     pub erc1155: Option<String>,
     pub custodian: Option<String>,
+    pub can_evolve: Option<bool>,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
