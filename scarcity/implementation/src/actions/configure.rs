@@ -32,6 +32,14 @@ impl Actionable for Configure {
             state.settings.paused = paused;
         }
 
+        if let Some(custodian) = self.custodian {
+            state.settings.custodian = custodian;
+        }
+
+        if let Some(erc1155) = self.erc1155 {
+            state.settings.erc1155 = erc1155;
+        }
+
         return Ok(HandlerResult::Write(state));
     }
 }
