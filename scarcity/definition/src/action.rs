@@ -84,6 +84,7 @@ pub struct Transfer {
     pub to: String,
     pub token_id: String,
     pub price: Balance,
+    pub qty: Option<Balance>,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize, Default)]

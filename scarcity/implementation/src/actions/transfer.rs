@@ -54,8 +54,20 @@ impl AsyncActionable for Transfer {
         state: State,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
+        let qty = self.qty.unwrap_or(Balance::new(1));
+
+        if qty.value < 1 {
+            return Err(ContractError::TransferAmountMustBeHigherThanZero);
+        }
+
         let base_id = match TokenId::from(self.token_id.as_ref()) {
-            TokenId::Nft(NftId { base_id, .. }) => Ok(base_id),
+            TokenId::Nft(NftId { base_id, .. }) => {
+                if qty.value != 1 {
+                    Err(ContractError::QtyMustBeOneForNftTransfers)
+                } else {
+                    Ok(base_id)
+                }
+            }
             TokenId::Shuffle(ShuffleId { base_id }) => Ok(base_id),
             _ => Err(ContractError::InvalidTokenId),
         }?;
@@ -117,7 +129,7 @@ impl AsyncActionable for Transfer {
             from: Some(token_owner),
             to: self.to.clone(),
             token_id: Some(self.token_id),
-            qty: Balance::new(1),
+            qty,
         });
 
         let transfers = transfers
