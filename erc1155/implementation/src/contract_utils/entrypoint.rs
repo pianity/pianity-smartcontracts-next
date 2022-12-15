@@ -4,6 +4,8 @@
 
 use std::cell::RefCell;
 
+use js_sys::Uint8Array;
+use rmp_serde;
 use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
@@ -48,15 +50,18 @@ thread_local! {
 }
 
 #[wasm_bindgen()]
-pub async fn handle(interaction: JsValue) -> Option<JsValue> {
-    let action: Result<Action, Error> = interaction.into_serde();
+pub async fn handle(interaction: Uint8Array) -> Option<Uint8Array> {
+    let action: Result<Action, rmp_serde::decode::Error> =
+        rmp_serde::from_slice(interaction.to_vec().as_slice());
 
     if action.is_err() {
         let error = Err::<HandlerResult, _>(ContractError::RuntimeError(
             "Error while parsing input".to_string(),
         ));
 
-        return Some(JsValue::from_serde(&error).unwrap());
+        return Some(Uint8Array::from(
+            rmp_serde::to_vec(&error).unwrap().as_slice(),
+        ));
     }
 
     let state = STATE.with(|service| service.borrow().clone());
@@ -67,26 +72,30 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
             STATE.with(|service| service.replace(state));
             None
         }
-        Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
-        error @ Err(_) => Some(JsValue::from_serde(&error).unwrap()),
+        Ok(HandlerResult::Read(_, response)) => Some(Uint8Array::from(
+            rmp_serde::to_vec(&response).unwrap().as_slice(),
+        )),
+        error @ Err(_) => Some(Uint8Array::from(
+            rmp_serde::to_vec(&error).unwrap().as_slice(),
+        )),
     }
 }
 
 #[wasm_bindgen(js_name = initState)]
-pub fn init_state(state: &JsValue) {
-    let state_parsed: State = state.into_serde().unwrap();
+pub fn init_state(state: Uint8Array) {
+    let state_parsed: State = rmp_serde::from_slice(state.to_vec().as_slice()).unwrap();
 
     STATE.with(|service| service.replace(state_parsed));
 }
 
 #[wasm_bindgen(js_name = currentState)]
-pub fn current_state() -> JsValue {
+pub fn current_state() -> Vec<u8> {
     // not sure if that's deterministic - which is very important for the execution network.
     // TODO: perf - according to docs:
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
     let current_state = STATE.with(|service| service.borrow().clone());
-    JsValue::from_serde(&current_state).unwrap()
+    rmp_serde::to_vec(&current_state).unwrap()
 }
 
 #[wasm_bindgen()]
