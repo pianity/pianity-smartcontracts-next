@@ -6,7 +6,6 @@ use std::cell::RefCell;
 
 use js_sys::Uint8Array;
 use rmp_serde;
-use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::contract;
@@ -51,8 +50,7 @@ thread_local! {
 
 #[wasm_bindgen()]
 pub async fn handle(interaction: Uint8Array) -> Option<Uint8Array> {
-    let action: Result<Action, rmp_serde::decode::Error> =
-        rmp_serde::from_slice(interaction.to_vec().as_slice());
+    let action = rmp_serde::from_slice::<Action>(interaction.to_vec().as_slice());
 
     if action.is_err() {
         let error = Err::<HandlerResult, _>(ContractError::RuntimeError(
@@ -60,7 +58,7 @@ pub async fn handle(interaction: Uint8Array) -> Option<Uint8Array> {
         ));
 
         return Some(Uint8Array::from(
-            rmp_serde::to_vec(&error).unwrap().as_slice(),
+            rmp_serde::to_vec_named(&error).unwrap().as_slice(),
         ));
     }
 
@@ -73,19 +71,18 @@ pub async fn handle(interaction: Uint8Array) -> Option<Uint8Array> {
             None
         }
         Ok(HandlerResult::Read(_, response)) => Some(Uint8Array::from(
-            rmp_serde::to_vec(&response).unwrap().as_slice(),
+            rmp_serde::to_vec_named(&response).unwrap().as_slice(),
         )),
         error @ Err(_) => Some(Uint8Array::from(
-            rmp_serde::to_vec(&error).unwrap().as_slice(),
+            rmp_serde::to_vec_named(&error).unwrap().as_slice(),
         )),
     }
 }
 
 #[wasm_bindgen(js_name = initState)]
 pub fn init_state(state: Uint8Array) {
-    let state_parsed: State = rmp_serde::from_slice(state.to_vec().as_slice()).unwrap();
-
-    STATE.with(|service| service.replace(state_parsed));
+    let state_parsed = rmp_serde::from_slice::<State>(state.to_vec().as_slice());
+    STATE.with(|service| service.replace(state_parsed.unwrap()));
 }
 
 #[wasm_bindgen(js_name = currentState)]
@@ -95,7 +92,7 @@ pub fn current_state() -> Vec<u8> {
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
     let current_state = STATE.with(|service| service.borrow().clone());
-    rmp_serde::to_vec(&current_state).unwrap()
+    rmp_serde::to_vec_named(&current_state).unwrap()
 }
 
 #[wasm_bindgen()]
