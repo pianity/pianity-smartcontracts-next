@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 warp-erc1155 = { path = "../definition" }
+kv_storage = { path = "../kv_storage" }
 wasm-bindgen = { version = "=0.2.79", features = ["serde-serialize"] }
 wasm-bindgen-futures = { version = "0.4.29" }
 serde = { version = "1.0", features = ["derive"] }

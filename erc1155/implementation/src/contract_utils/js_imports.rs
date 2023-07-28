@@ -2,6 +2,10 @@
 /////////////// DO NOT MODIFY THIS FILE /////////////
 /////////////////////////////////////////////////////
 
+use async_trait::async_trait;
+use kv_storage::KvStorage;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 
@@ -20,7 +24,6 @@ extern "C" {
     pub fn timestamp() -> i32;
 }
 
-
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen]
@@ -32,7 +35,6 @@ extern "C" {
     #[wasm_bindgen(static_method_of = Contract, js_name = contractOwner)]
     pub fn owner() -> String;
 }
-
 
 #[wasm_bindgen]
 extern "C" {
@@ -48,7 +50,6 @@ extern "C" {
     #[wasm_bindgen(static_method_of = Transaction, js_name = target)]
     pub fn target() -> String;
 }
-
 
 #[wasm_bindgen]
 extern "C" {
@@ -81,6 +82,38 @@ extern "C" {
 
     #[wasm_bindgen(static_method_of = Vrf, js_name = randomInt)]
     pub fn randomInt(max_value: i32) -> i32;
+}
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen]
+    pub type KvJs;
+
+    #[wasm_bindgen(static_method_of = KvJs)]
+    pub async fn put(key: &str, value: JsValue);
+
+    #[wasm_bindgen(static_method_of = KvJs)]
+    pub async fn get(key: &str) -> JsValue;
+
+    #[wasm_bindgen(static_method_of = KvJs)]
+    pub async fn del(key: &str);
+}
+
+pub struct Kv;
+
+#[async_trait(?Send)]
+impl KvStorage for Kv {
+    async fn put<T: Serialize>(key: &str, value: &T) {
+        KvJs::put(key, JsValue::from_serde(value).unwrap()).await;
+    }
+
+    async fn get<T: DeserializeOwned>(key: &str) -> T {
+        KvJs::get(key).await.into_serde().unwrap()
+    }
+
+    async fn del(key: &str) {
+        KvJs::del(key).await;
+    }
 }
 
 #[wasm_bindgen]

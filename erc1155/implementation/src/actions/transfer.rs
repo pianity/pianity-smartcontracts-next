@@ -1,14 +1,24 @@
+use async_trait::async_trait;
+use wasm_bindgen::JsValue;
+
+use kv_storage::{kv_storage_macro, KvStorage};
+
 use warp_erc1155::action::{ActionResult, HandlerResult, Transfer};
 use warp_erc1155::error::ContractError;
-use warp_erc1155::state::{Balance, State};
+use warp_erc1155::state::{Balance, Info, State as StateLegacy, Token};
 
-use crate::contract_utils::js_imports::log;
+use crate::contract_utils::js_imports::{log, Kv};
+use crate::state::State;
 use crate::utils::is_op;
 
-use super::{approval::is_approved_for_all_internal, Actionable};
+// use super::approval::is_approved_for_all_internal;
+use super::AsyncActionable;
 
-impl Actionable for Transfer {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
+#[async_trait(?Send)]
+impl AsyncActionable for Transfer {
+    async fn action(self, caller: String, mut state: StateLegacy) -> ActionResult {
+        let settings = State::settings().value().await;
+
         if self.qty.value == 0 {
             return Err(ContractError::TransferAmountMustBeHigherThanZero);
         }
@@ -19,7 +29,7 @@ impl Actionable for Transfer {
             caller.clone()
         };
 
-        if !state.settings.allow_free_transfer && !is_op(&state, &caller) {
+        if !settings.allow_free_transfer && !is_op(&state, &caller) {
             return Err(ContractError::UnauthorizedAddress(caller));
         }
 
@@ -31,11 +41,16 @@ impl Actionable for Transfer {
             return Err(ContractError::TransferFromAndToCannotBeEqual);
         }
 
-        let token_id = self.token_id.as_ref().unwrap_or(&state.default_token);
-        let token = state
-            .tokens
-            .get_mut(token_id)
-            .ok_or_else(|| ContractError::TokenNotFound(token_id.clone()))?;
+        // let token_id = self.token_id.as_ref().unwrap_or(&settings.default_token);
+        // let token = state
+        //     .tokens
+        //     .get_mut(token_id)
+        //     .ok_or_else(|| ContractError::TokenNotFound(token_id.clone()))?;
+
+        let token = {
+            let token_id = self.token_id.as_ref().unwrap_or(&settings.default_token);
+            State::tokens(token_id)
+        };
 
         // Checking if caller has enough funds
         let from_balance = *token.balances.get(&from).unwrap_or(&Balance::new(0));

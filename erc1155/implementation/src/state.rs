@@ -1,5 +1,6 @@
-use kv_storage::kv_storage_macro;
-use schemars::JsonSchema;
+use crate::contract_utils::js_imports::Kv;
+use kv_storage::{kv_storage_macro, KvStorage};
+// use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -31,11 +32,10 @@ mod string {
 
 pub type BalancePrecision = u64;
 
-#[derive(JsonSchema, Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Balance {
     #[serde(with = "string")]
-    #[schemars(with = "String")]
     pub value: BalancePrecision,
 }
 
@@ -48,7 +48,7 @@ impl Balance {
 pub type Balances = HashMap<String, Balance>;
 pub type Approvals = HashMap<String, bool>;
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Token {
     pub ticker: String,
@@ -57,9 +57,12 @@ pub struct Token {
     pub balances: Balances,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub default_token: String,
+    pub ticker_nonce: u32,
+
     pub paused: bool,
     pub can_evolve: bool,
 
@@ -71,7 +74,7 @@ pub struct Settings {
     pub allow_free_transfer: bool,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Info {
     pub name: String,
@@ -79,17 +82,16 @@ pub struct Info {
     pub ticker_nonce: u32,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[kv_storage_macro(Kv)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+// #[serde(rename_all = "camelCase")]
 pub struct State {
-    pub name: String,
+    name: String,
+    settings: Settings,
 
-    // pub settings: Settings,
-    //
-    // pub default_token: String,
-    // pub ticker_nonce: u32,
-    // pub tokens: HashMap<String, Token>,
-    // pub approvals: HashMap<String, Approvals>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub evolve: Option<String>,
+    #[map]
+    tokens: Token,
+    approvals: HashMap<String, Approvals>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    evolve: Option<String>,
 }
