@@ -52,7 +52,16 @@ mod tests {
         async fn get<T: DeserializeOwned>(key: &str) -> T {
             println!("{}", &format!("get: {}", key));
 
-            serde_json::from_str("\"bonjour\"").unwrap()
+            match key {
+                ".name" => serde_json::from_str("\"hello\"").unwrap(),
+                ".tokens.bob" => {
+                    serde_json::from_str(r#"{ "name": "bob", "balance": 0 }"#).unwrap()
+                }
+                ".settings.paused" => serde_json::from_str("false").unwrap(),
+                _ => serde_json::from_str("{}").unwrap(),
+            }
+
+            // serde_json::from_str("\"bonjour\"").unwrap()
         }
 
         async fn del(key: &str) {
@@ -73,36 +82,40 @@ mod tests {
     #[kv_storage_macro(kv = "Kv")]
     struct State {
         name: String,
-        // #[kv_storage_macro(subpath)]
-        // settings: Settings,
+        #[kv_storage_macro(subpath)]
+        settings: Settings,
         #[kv_storage_macro(map)]
         tokens: Token,
     }
 
-    // #[kv_storage_macro(kv = "Kv", subpath)]
-    // struct Settings {
-    //     paused: bool,
-    //     rate: u32,
-    //     #[kv_storage_macro(subpath)]
-    //     sub_settings: SubSettings,
-    // }
-
-    // #[kv_storage_macro(kv = "Kv", subpath)]
-    // struct SubSettings {
-    //     sub: bool,
-    // }
+    #[kv_storage_macro(kv = "Kv", subpath)]
+    struct Settings {
+        paused: bool,
+        rate: u32,
+        #[kv_storage_macro(subpath)]
+        sub_settings: SubSettings,
+    }
 
     #[kv_storage_macro(kv = "Kv", subpath)]
-    // #[derive(Serialize, Deserialize, Debug)]
+    struct SubSettings {
+        sub: bool,
+    }
+
+    // #[kv_storage_macro(kv = "Kv", subpath)]
+    #[derive(Serialize, Deserialize, Debug)]
     struct Token {
         name: String,
-        balances: u32,
+        balance: u32,
     }
 
     #[tokio::test]
     async fn test_macro() {
-        let paused = State::name().value().await;
-        let paused = State::tokens().value("bob").await;
+        let name = State::name().value().await;
+        let bob = State::tokens("bob").value().await;
+        let paused = State::settings().paused().value().await;
+
+        println!("{}, {:?}, {}", name, bob, paused);
+
         // let paused = State::settings().sub_settings().sub().value().await;
         // let value = paused.value().await;
 
