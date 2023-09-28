@@ -3,7 +3,7 @@ use quote::{format_ident, quote};
 use syn::{
     self,
     parse::{Parse, ParseStream},
-    parse_macro_input, Attribute, AttributeArgs, DeriveInput, Ident, Meta, NestedMeta,
+    parse_macro_input, Attribute, AttributeArgs, DeriveInput, Ident, Meta, NestedMeta, Type,
 };
 
 struct MacroArgs {
@@ -22,7 +22,7 @@ impl From<Vec<NestedMeta>> for MacroArgs {
                     NestedMeta::Meta(Meta::Path(p)) if p.is_ident("subpath") => {
                         subpath = true;
                     }
-                    NestedMeta::Meta(Meta::NameValue(nv)) if nv.path.is_ident("kv") => {
+                    NestedMeta::Meta(Meta::NameValue(nv)) if nv.path.is_ident("impl") => {
                         if let syn::Lit::Str(lit) = nv.lit {
                             kv = Some(Ident::new(&lit.value(), Span::call_site()));
                         }
@@ -36,7 +36,7 @@ impl From<Vec<NestedMeta>> for MacroArgs {
 
         Self {
             subpath,
-            kv: kv.expect("Required `kv` attribute not provided"),
+            kv: kv.expect("Required `impl` attribute not provided"),
         }
     }
 }
@@ -52,7 +52,7 @@ impl Parse for FieldArgs {
         let mut subpath = false;
 
         while !input.is_empty() {
-            let ident: syn::Ident = input.parse()?;
+            let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "map" => map = true,
                 "subpath" => subpath = true,
@@ -77,9 +77,15 @@ impl From<Vec<Attribute>> for FieldArgs {
     fn from(attrs: Vec<Attribute>) -> Self {
         let mut output: Vec<FieldArgs> = Vec::new();
         for attr in attrs {
-            if attr.path.is_ident("kv_storage_macro") {
-                let parsed_args = attr.parse_args().expect("shit in the pant");
+            if attr.path.is_ident("kv") {
+                let parsed_args = attr.parse_args().unwrap();
                 output.push(parsed_args);
+            } else {
+                if let Some(ident) = attr.path.get_ident() {
+                    panic!("Invalid attribute: {}", ident.to_string());
+                } else {
+                    panic!("Invalid attribute");
+                }
             }
         }
         Self {
@@ -90,14 +96,11 @@ impl From<Vec<Attribute>> for FieldArgs {
 }
 
 fn gen_field_name(
-    field: &syn::Field,
+    field_name: &Ident,
     field_args: &FieldArgs,
     macro_args: &MacroArgs,
-    field_struct_name: &Ident,
+    return_type: Ident,
 ) -> TokenStream {
-    let field_name = field.ident.as_ref().unwrap();
-    let field_type = &field.ty;
-
     let mut fun_args: Vec<TokenStream> = Vec::new();
     let mut path_args = Vec::new();
 
@@ -112,12 +115,6 @@ fn gen_field_name(
         fun_args.push(quote!(key: &str));
         path_args.push(quote!(&key));
     }
-
-    let return_type = if field_args.subpath {
-        quote!(#field_type)
-    } else {
-        quote!(#field_struct_name)
-    };
 
     let format_str = {
         let format_str = match path_args.len() {
@@ -168,40 +165,124 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                 let kv_struct = &macro_args.kv;
 
                 let field_struct_name = format_ident!(
-                    "{}{}{}",
-                    if field_args.map {
-                        "StorageMap"
-                    } else {
-                        "StorageItem"
-                    },
+                    "{}_{}_{}",
+                    "StorageItem",
                     root_struct_name,
                     field_name
                 );
 
-                (
-                    // Field for main Storage struct
-                    gen_field_name(field, &field_args, &macro_args, &field_struct_name),
-                    // Implementation of StorageItem or StorageMap
-                    if field_args.subpath {
-                        quote! {}
+                let return_type = if field_args.subpath {
+                    if let syn::Type::Path(type_path) = &field_type {
+                        let ident = type_path.path.segments.last().unwrap().ident.clone();
+                        format_ident!("Subpath_{}", &ident)
+                    } else {
+                        panic!("I'm afraid I cannot let you do that, Dave");
+                    }
+                } else {
+                    field_struct_name.clone()
+                };
+
+                let field_maybe_struct_name = format_ident!("{}_{}", "Maybe", field_struct_name);
+                let field_maybe_struct = if field_args.map {
+                    let exists_steps = if !field_args.subpath {
+                        quote! {
+                            #kv_struct::get::<u8>(&self.0).await.is_some()
+                        }
                     } else {
                         quote! {
+                            #kv_struct::get::<u8>(&format!("{}.-", self.0)).await.is_some_and(|v| v == 1)
+                        }
+                    };
+
+                    let init_steps = if !field_args.subpath {
+                        quote! {
+                            #kv_struct::put::<#field_type>(&self.0, &default).await;
+                        }
+                    } else {
+                        quote! {
+                            default.init(self.0.clone()).await;
+                            #kv_struct::put::<u8>(&format!("{}.-", self.0), &1).await;
+                        }
+                    };
+
+                    quote! {
+                        #[allow(non_camel_case_types)]
+                        struct #field_maybe_struct_name(pub String);
+
+                        impl #field_maybe_struct_name {
+                            pub async fn exists(&self) -> bool {
+                                #exists_steps
+                            }
+
+                            // pub async fn init_default(&self) -> #field_struct_name {
+                            //     if !self.exists().await {
+                            //         // #kv_struct::put::<#field_type>(&self.0, &#field_type::default()).await;
+                            //     }
+                            //
+                            //     #field_struct_name(self.0.clone())
+                            // }
+
+                            pub async fn init(&self, default: #field_type) -> #return_type {
+                                if !self.exists().await {
+                                    #init_steps
+                                }
+
+                                #return_type(self.0.clone())
+                            }
+
+                            // pub async fn else_init<F>(&self, default_fn: F) -> #return_type
+                            // where
+                            //     F: FnOnce() -> #field_type,
+                            // {
+                            //     if !self.exists().await {
+                            //         #kv_struct::put::<#field_type>(&self.0, &default_fn()).await;
+                            //     }
+                            //
+                            //     #field_struct_name(self.0.clone())
+                            // }
+
+                            // pub async fn set_value(&self, value: &#field_type) {
+                            //     #kv_struct::put::<#field_type>(&self.0, value).await;
+                            // }
+
+                            // pub async fn value(&self) -> Option<#field_type> {
+                            //     #kv_struct::get(&self.0).await
+                            // }
+                        }
+                    }
+                } else {
+                    quote!()
+                };
+
+                let return_type = if !field_args.map {
+                    return_type
+                } else {
+                    field_maybe_struct_name
+                };
+
+                (
+                    // Field for main Storage struct
+                    gen_field_name(field_name, &field_args, &macro_args, return_type),
+                    // // Implementation of StorageItem or StorageMap
+                    if field_args.subpath {
+                        quote! {
+                            #field_maybe_struct
+                        }
+                    } else {
+                        quote! {
+                            #field_maybe_struct
+
+                            #[allow(non_camel_case_types)]
                             #root_struct_vis struct #field_struct_name(pub String);
 
                             impl #field_struct_name {
-                                pub async fn set_value(&self, value: #field_type) {
-                                    #kv_struct::put::<#field_type>(&self.0, &value).await;
+                                pub async fn set_value(&self, value: &#field_type) {
+                                    #kv_struct::put::<#field_type>(&self.0, value).await;
                                 }
 
                                 pub async fn value(&self) -> #field_type {
-                                    #kv_struct::get(&self.0).await
+                                    #kv_struct::get(&self.0).await.unwrap()
                                 }
-
-                                // async fn update<'b, F: FnOnce(&mut #item_type)>(&self, update_fn: F) {
-                                //     let mut value = self.value().await;
-                                //     update_fn(&mut value);
-                                //     self.set_value(value).await;
-                                // }
                             }
                         }
                     },
@@ -209,19 +290,128 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
             })
             .unzip();
 
-        let storage = if macro_args.subpath {
+        /// Transform field type to `HashMap<String, T>` if `map` attribute is set
+        fn transform_field_type(field_type: &Type, is_map: bool) -> TokenStream {
+            if is_map {
+                quote! {
+                    std::collections::HashMap<String, #field_type>
+                }
+            } else {
+                quote! {
+                    #field_type
+                }
+            }
+        }
+
+        // Construct the fields of the constructor struct
+        let cons_fields: Vec<_> = fields
+            .iter()
+            .map(|field| {
+                let field_name = field.ident.as_ref().unwrap();
+                let field_args: FieldArgs = field.attrs.clone().into();
+                let field_type = transform_field_type(&field.ty, field_args.map);
+
+                quote! {
+                    #field_name: #field_type
+                }
+            })
+            .collect();
+
+        // Construct the init method of the constructor struct, which initializes the KV store
+        // fields
+        let init_method = {
+            let steps = fields.iter().map(|field| {
+                let field_name = field.ident.as_ref().unwrap();
+                let field_args: FieldArgs = field.attrs.clone().into();
+                let field_type = &field.ty;
+
+                let kv_struct = &macro_args.kv;
+
+                if !field_args.map {
+                    let path = if !macro_args.subpath {
+                        let path_literal = format!(".{}", field_name);
+                        quote!(#path_literal)
+                    } else {
+                        let fmt_literal = format!("{{}}.{}", field_name);
+                        quote!(&format!(#fmt_literal, path))
+                    };
+
+                    if !field_args.subpath {
+                        quote! {
+                            #kv_struct::put::<#field_type>(#path, &self.#field_name).await
+                        }
+                    } else {
+                        quote! {
+                            self.#field_name.init(String::from(#path)).await
+                        }
+                    }
+                } else {
+                    let path = if !macro_args.subpath {
+                        let fmt_literal = format!(".{}.{{}}", field_name);
+                        quote!(format!(#fmt_literal, key))
+                    } else {
+                        let fmt_literal = format!("{{}}.{}.{{}}", field_name);
+                        quote!(format!(#fmt_literal, path, key))
+                    };
+
+                    if !field_args.subpath {
+                        quote! {
+                            for (key, value) in self.#field_name.iter() {
+                                #kv_struct::put::<#field_type>(&#path, &value).await
+                            }
+                        }
+                    } else {
+                        quote! {
+                            for (key, value) in self.#field_name.iter() {
+                                value.init(#path).await;
+                                #kv_struct::put::<u8>(&format!("{}.-", #path), &1).await;
+                            }
+                        }
+                    }
+                }
+            });
+
+            let init_path_arg = if macro_args.subpath {
+                quote!(, path: String)
+            } else {
+                quote!()
+            };
+
             quote! {
-                #root_struct_vis struct #root_struct_name(pub String);
+                pub async fn init(&self #init_path_arg) {
+                    #(#steps;)*
+                }
+            }
+        };
+
+        let storage = if !macro_args.subpath {
+            quote! {
+                #root_struct_vis struct #root_struct_name {
+                    #(#cons_fields),*
+                }
 
                 impl #root_struct_name {
+                    #init_method
+
                     #(#storage_fields)*
                 }
             }
         } else {
+            let accessor_struct_name = format_ident!("Subpath_{}", root_struct_name);
+
             quote! {
-                #root_struct_vis struct #root_struct_name;
+                #root_struct_vis struct #root_struct_name {
+                    #(#cons_fields),*
+                }
 
                 impl #root_struct_name {
+                    #init_method
+                }
+
+                #[allow(non_camel_case_types)]
+                #root_struct_vis struct #accessor_struct_name(pub String);
+
+                impl #accessor_struct_name {
                     #(#storage_fields)*
                 }
             }
