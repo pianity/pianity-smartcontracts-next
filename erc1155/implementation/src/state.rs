@@ -1,5 +1,5 @@
 use crate::contract_utils::js_imports::Kv;
-use kv_storage::{kv_storage_macro, KvStorage};
+use kv_storage::{kv, KvStorage};
 // use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -33,9 +33,7 @@ mod string {
 pub type BalancePrecision = u64;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", transparent)]
 pub struct Balance {
-    #[serde(with = "string")]
     pub value: BalancePrecision,
 }
 
@@ -45,23 +43,34 @@ impl Balance {
     }
 }
 
-pub type Balances = HashMap<String, Balance>;
-pub type Approvals = HashMap<String, bool>;
+// pub type Balances = HashMap<String, Balance>;
+// pub type Approvals = HashMap<String, bool>;
 
+#[kv(impl = "Kv", subpath)]
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Token {
-    pub ticker: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tx_id: Option<String>,
-    pub balances: Balances,
+pub struct Approvals {
+    #[kv(map)]
+    approves: bool,
 }
 
+#[kv(impl = "Kv", subpath)]
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+pub struct Token {
+    pub ticker: String,
+    pub tx_id: Option<String>,
+    #[kv(map)]
+    pub balances: Balance,
+}
+
+// #[derive(Serialize, Deserialize, Clone, Default, Debug)]
+// #[serde(rename_all = "camelCase")]
+
+#[kv(impl = "Kv", subpath)]
+// #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Settings {
     pub default_token: String,
     pub ticker_nonce: u32,
+    pub test: Vec<u32>,
 
     pub paused: bool,
     pub can_evolve: bool,
@@ -75,23 +84,19 @@ pub struct Settings {
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct Info {
     pub name: String,
     pub default_token: String,
     pub ticker_nonce: u32,
 }
 
-#[kv_storage_macro(Kv)]
+#[kv(impl = "Kv")]
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-// #[serde(rename_all = "camelCase")]
-pub struct State {
-    name: String,
-    settings: Settings,
-
-    #[map]
+pub struct KvState {
+    #[kv(map, subpath)]
     tokens: Token,
-    approvals: HashMap<String, Approvals>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    evolve: Option<String>,
+    #[kv(map, subpath)]
+    approvals: Approvals,
+    #[kv(subpath)]
+    settings: Settings,
 }

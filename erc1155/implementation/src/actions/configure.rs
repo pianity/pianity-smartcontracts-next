@@ -1,14 +1,18 @@
+use async_trait::async_trait;
+
 use warp_erc1155::action::{ActionResult, Configure, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::State;
 
+use crate::state::KvState;
 use crate::{
-    actions::Actionable,
+    actions::AsyncActionable,
     utils::{is_op, is_super_op},
 };
 
-impl Actionable for Configure {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
+#[async_trait(?Send)]
+impl AsyncActionable for Configure {
+    async fn action(self, caller: String, mut state: State) -> ActionResult {
         let is_super_op = is_super_op(&state, &caller);
         let is_op = is_op(&state, &caller);
 
@@ -22,29 +26,35 @@ impl Actionable for Configure {
         }
 
         if let Some(super_operators) = self.super_operators {
-            state.settings.super_operators = super_operators;
+            KvState::settings()
+                .super_operators()
+                .set(&super_operators)
+                .await;
         }
 
         if let Some(operators) = self.operators {
-            state.settings.operators = operators;
+            KvState::settings().operators().set(&operators).await;
         }
 
         if let Some(can_evolve) = self.can_evolve {
-            state.settings.can_evolve = can_evolve;
+            KvState::settings().can_evolve().set(&can_evolve).await;
         }
 
         if let Some(proxies) = self.proxies {
-            state.settings.proxies = proxies;
+            KvState::settings().proxies().set(&proxies).await;
         }
 
         if let Some(paused) = self.paused {
-            state.settings.paused = paused;
+            KvState::settings().paused().set(&paused).await;
         }
 
         if let Some(allow_free_transfer) = self.allow_free_transfer {
-            state.settings.allow_free_transfer = allow_free_transfer;
+            KvState::settings()
+                .allow_free_transfer()
+                .set(&allow_free_transfer)
+                .await;
         }
 
-        return Ok(HandlerResult::Write(state));
+        return Ok(HandlerResult::None(state));
     }
 }

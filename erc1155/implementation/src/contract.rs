@@ -4,8 +4,12 @@ use warp_erc1155::action::{Action, ActionResult, Configure, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::State;
 
-use crate::actions::{Actionable, *};
-use crate::contract_utils::js_imports::{SmartWeave, Transaction};
+use crate::contract_utils::js_imports::{log, Kv, KvJs};
+use crate::{
+    actions::{Actionable, AsyncActionable, *},
+    contract_utils::js_imports::{SmartWeave, Transaction},
+    state::KvState,
+};
 
 #[async_recursion(?Send)]
 pub async fn handle(state: State, action: Action) -> ActionResult {
@@ -18,7 +22,46 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
     // {
     //     return Err(ContractError::ContractIsPaused);
     // }
+
+    let value = serde_wasm_bindgen::to_value::<[u32]>(&[]).unwrap();
+
+    log(&format!("CONTRACT putting \"{:?}\"", value));
+    KvJs::put(".settings.ticker_nonce", value).await.unwrap();
+
+    log(&format!(
+        "CONTRACT get: \"{:?}\"",
+        KvJs::get(".settings.ticker_nonce").await.unwrap()
+    ));
+
+    // KvState::init(&KvState::default()).await;
     //
+    // KvState::settings().test().set(&vec![123, 456]).await;
+    //
+    // KvState::settings().proxies().get().await;
+    //
+    // KvState::settings().proxies().get().await;
+    //
+    // KvState::settings().test().get().await;
+    //
+    // KvState::settings().ticker_nonce().get().await;
+    //
+    // KvState::settings().default_token().get().await;
+    //
+    // KvState::settings().paused().get().await;
+
+    KvState::settings().allow_free_transfer().get().await;
+
+    let effective_caller = if KvState::settings()
+        .proxies()
+        .get()
+        .await
+        .contains(&direct_caller)
+    {
+        original_caller
+    } else {
+        direct_caller
+    };
+
     // let effective_caller = if state.settings.proxies.contains(&direct_caller) {
     //     original_caller
     // } else {
@@ -27,15 +70,14 @@ pub async fn handle(state: State, action: Action) -> ActionResult {
 
     match action {
         Action::Transfer(action) => action.action(String::new(), state).await,
-        _ => unimplemented!()
-        // Action::BalanceOf(action) => action.action(effective_caller, state),
-        // Action::Configure(action) => action.action(effective_caller, state),
-        // Action::Evolve(action) => action.action(effective_caller, state),
-        // Action::SetApprovalForAll(action) => action.action(effective_caller, state),
-        // Action::IsApprovedForAll(action) => action.action(effective_caller, state),
-        // Action::Mint(action) => action.action(effective_caller, state),
-        // Action::Burn(action) => action.action(effective_caller, state),
-        // Action::Batch(action) => action.action(effective_caller, state).await,
+        Action::BalanceOf(action) => action.action(effective_caller, state).await,
+        Action::Configure(action) => action.action(effective_caller, state).await,
+        Action::Evolve(action) => action.action(effective_caller, state),
+        Action::SetApprovalForAll(action) => action.action(effective_caller, state).await,
+        Action::IsApprovedForAll(action) => action.action(effective_caller, state).await,
+        Action::Mint(action) => action.action(effective_caller, state).await,
+        Action::Burn(action) => action.action(effective_caller, state).await,
+        Action::Batch(action) => action.action(effective_caller, state).await,
     }
 }
 

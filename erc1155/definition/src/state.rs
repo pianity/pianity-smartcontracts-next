@@ -1,4 +1,3 @@
-use kv_storage::kv_storage_macro;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -85,11 +84,13 @@ pub struct State {
     pub name: String,
 
     // pub settings: Settings,
-    //
+
     // pub default_token: String,
     // pub ticker_nonce: u32,
+
     // pub tokens: HashMap<String, Token>,
     // pub approvals: HashMap<String, Approvals>,
+    pub can_evolve: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evolve: Option<String>,
 }

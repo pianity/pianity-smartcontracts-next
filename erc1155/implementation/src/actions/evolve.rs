@@ -8,7 +8,7 @@ use super::Actionable;
 
 impl Actionable for Evolve {
     fn action(self, caller: String, mut state: State) -> ActionResult {
-        if !state.settings.can_evolve {
+        if !state.can_evolve {
             Err(ContractError::EvolveNotAllowed)
         } else if !is_super_op(&state, &caller) {
             Err(ContractError::OnlyOwnerCanEvolve)

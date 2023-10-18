@@ -16,6 +16,7 @@ impl AsyncActionable for Batch {
 
         let mut read_mode = false;
         let mut write_mode = false;
+        let mut none_mode = false;
 
         for action in self.actions {
             if let Action::Batch(_) = action {
@@ -42,6 +43,11 @@ impl AsyncActionable for Batch {
                     results.push(response);
                     state
                 }
+                HandlerResult::None(state) => {
+                    none_mode = true;
+
+                    state
+                }
             }
         }
 
@@ -49,6 +55,8 @@ impl AsyncActionable for Batch {
             Ok(HandlerResult::Read(state, ReadResponse::Batch(results)))
         } else if write_mode {
             Ok(HandlerResult::Write(state))
+        } else if none_mode {
+            Ok(HandlerResult::None(state))
         } else {
             Err(ContractError::EmptyBatch)
         }

@@ -4,7 +4,7 @@
 
 use std::cell::RefCell;
 
-use serde_json::Error;
+// use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::contract;
@@ -49,14 +49,16 @@ thread_local! {
 
 #[wasm_bindgen()]
 pub async fn handle(interaction: JsValue) -> Option<JsValue> {
-    let action: Result<Action, Error> = interaction.into_serde();
+    let action = serde_wasm_bindgen::from_value::<Action>(interaction);
+    // let action: Result<Action, Error> = interaction.into_serde();
 
     if action.is_err() {
         let error = Err::<HandlerResult, _>(ContractError::RuntimeError(
             "Error while parsing input".to_string(),
         ));
 
-        return Some(JsValue::from_serde(&error).unwrap());
+        // return Some(JsValue::from_serde(&error).unwrap());
+        return Some(serde_wasm_bindgen::to_value(&error).unwrap());
     }
 
     let state = STATE.with(|service| service.borrow().clone());
@@ -68,6 +70,7 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
             None
         }
         Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
+        Ok(HandlerResult::None(_)) => None,
         error @ Err(_) => Some(JsValue::from_serde(&error).unwrap()),
     }
 }

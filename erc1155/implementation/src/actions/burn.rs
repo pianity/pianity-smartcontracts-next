@@ -1,11 +1,14 @@
+use async_trait::async_trait;
 use warp_erc1155::action::{ActionResult, Burn, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::State;
 
-use crate::{actions::Actionable, utils::is_op};
+use crate::state::{Balance, KvState};
+use crate::{actions::AsyncActionable, utils::is_op};
 
-impl Actionable for Burn {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
+#[async_trait(?Send)]
+impl AsyncActionable for Burn {
+    async fn action(self, caller: String, mut state: State) -> ActionResult {
         if !is_op(&state, &caller) {
             return Err(ContractError::UnauthorizedAddress(caller));
         }
@@ -16,30 +19,28 @@ impl Actionable for Burn {
             caller
         };
 
-        let token_id = self.token_id.as_ref().unwrap_or(&state.default_token);
+        let token_id = self
+            .token_id
+            .unwrap_or(KvState::settings().default_token().get().await);
 
-        let balances = if let Some(token) = state.tokens.get_mut(token_id) {
-            &mut token.balances
-        } else {
-            return Err(ContractError::TokenNotFound(token_id.clone()));
-        };
+        let token = KvState::tokens(&token_id)
+            .ok_or(ContractError::TokenNotFound(token_id.clone()))
+            .await?;
 
-        let owner_balance = if let Some(balance) = balances.get_mut(&owner) {
-            balance
-        } else {
+        let balance = token
+            .balances(&owner)
+            .peek()
+            .await
+            .unwrap_or(Balance::new(0))
+            .value;
+
+        if balance < self.qty.value {
             return Err(ContractError::OwnerBalanceNotEnough(owner));
-        };
-
-        if owner_balance.value < self.qty.value {
-            return Err(ContractError::OwnerBalanceNotEnough(owner));
-        } else if owner_balance.value - self.qty.value == 0 {
-            balances.remove(&owner);
-
-            if balances.len() == 0 {
-                state.tokens.remove(token_id);
-            }
         } else {
-            owner_balance.value -= self.qty.value;
+            token
+                .balances(&owner)
+                .map(|balance| Balance::new(balance.value - self.qty.value))
+                .await;
         }
 
         Ok(HandlerResult::Write(state))

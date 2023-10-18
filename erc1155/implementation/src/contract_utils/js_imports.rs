@@ -84,19 +84,31 @@ extern "C" {
     pub fn randomInt(max_value: i32) -> i32;
 }
 
+// #[wasm_bindgen]
+// extern "C" {
+//     #[wasm_bindgen]
+//     pub type KvJs;
+//
+//     #[wasm_bindgen(static_method_of = KvJs)]
+//     pub async fn put(key: &str, value: JsValue);
+//
+//     #[wasm_bindgen(static_method_of = KvJs)]
+//     pub async fn get(key: &str) -> JsValue;
+//
+//     #[wasm_bindgen(static_method_of = KvJs)]
+//     pub async fn del(key: &str);
+// }
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen]
     pub type KvJs;
 
-    #[wasm_bindgen(static_method_of = KvJs)]
-    pub async fn put(key: &str, value: JsValue);
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvGet)]
+    pub async fn get(key: &str) -> Result<JsValue, JsValue>;
 
-    #[wasm_bindgen(static_method_of = KvJs)]
-    pub async fn get(key: &str) -> JsValue;
-
-    #[wasm_bindgen(static_method_of = KvJs)]
-    pub async fn del(key: &str);
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvPut)]
+    pub async fn put(key: &str, value: JsValue) -> Result<(), JsValue>;
 }
 
 pub struct Kv;
@@ -104,16 +116,24 @@ pub struct Kv;
 #[async_trait(?Send)]
 impl KvStorage for Kv {
     async fn put<T: Serialize>(key: &str, value: &T) {
-        KvJs::put(key, JsValue::from_serde(value).unwrap()).await;
+        // KvJs::put(key, JsValue::from_serde(value).unwrap())
+        //     .await
+        //     .unwrap();
+
+        KvJs::put(key, serde_wasm_bindgen::to_value(value).unwrap())
+            .await
+            .unwrap();
     }
 
-    async fn get<T: DeserializeOwned>(key: &str) -> T {
-        KvJs::get(key).await.into_serde().unwrap()
+    async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
+        // KvJs::get(key).await.unwrap().into_serde().unwrap()
+
+        serde_wasm_bindgen::from_value(KvJs::get(key).await.unwrap()).unwrap()
     }
 
-    async fn del(key: &str) {
-        KvJs::del(key).await;
-    }
+    // async fn del(key: &str) {
+    //     KvJs::del(key).await;
+    // }
 }
 
 #[wasm_bindgen]

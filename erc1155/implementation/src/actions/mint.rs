@@ -1,13 +1,19 @@
 use async_trait::async_trait;
-use warp_erc1155::action::{ActionResult, HandlerResult, Mint};
-use warp_erc1155::error::ContractError;
-use warp_erc1155::state::{State, Token};
 use wasm_bindgen::JsValue;
 
-use crate::contract_utils::js_imports::{Kv, Transaction};
-use crate::utils::is_op;
+use warp_erc1155::{
+    action::{ActionResult, HandlerResult, Mint},
+    error::ContractError,
+    state::State,
+};
 
-use super::{Actionable, AsyncActionable};
+use crate::{
+    contract_utils::js_imports::{Kv, Transaction},
+    state::{KvState, Token},
+    utils::is_op,
+};
+
+use super::AsyncActionable;
 
 fn get_token_id(prefix: Option<String>, base_id: Option<String>) -> String {
     let base_id = base_id.unwrap_or_else(Transaction::id);
@@ -15,8 +21,8 @@ fn get_token_id(prefix: Option<String>, base_id: Option<String>) -> String {
 }
 
 #[async_trait(?Send)]
-impl Actionable for Mint {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
+impl AsyncActionable for Mint {
+    async fn action(self, caller: String, mut state: State) -> ActionResult {
         if self.qty.value == 0 {
             return Err(ContractError::TransferAmountMustBeHigherThanZero);
         }
@@ -43,20 +49,44 @@ impl Actionable for Mint {
         // )
         // .await;
 
-        state
-            .tokens
-            .entry(token_id.clone())
-            .or_insert(Token {
-                ticker: format!("{}{}", state.default_token, state.ticker_nonce),
+        let default_token = KvState::settings().default_token().get().await;
+        let ticker_nonce = KvState::settings().ticker_nonce().get().await;
+
+        KvState::tokens(&token_id)
+            .init(Token {
+                ticker: format!("{}{}", default_token, ticker_nonce),
                 tx_id: Some(Transaction::id()),
                 ..Default::default()
             })
-            .balances
-            .entry(caller.clone())
-            .or_default()
-            .value += self.qty.value;
+            .await
+            .balances(&caller)
+            .init_default()
+            .await
+            .map(|mut balances| {
+                balances.value += self.qty.value;
+                balances
+            })
+            .await;
 
-        state.ticker_nonce += 1;
+        KvState::settings()
+            .ticker_nonce()
+            .map(|nonce| nonce + 1)
+            .await;
+
+        // state
+        //     .tokens
+        //     .entry(token_id.clone())
+        //     .or_insert(Token {
+        //         ticker: format!("{}{}", state.default_token, state.ticker_nonce),
+        //         tx_id: Some(Transaction::id()),
+        //         ..Default::default()
+        //     })
+        //     .balances
+        //     .entry(caller.clone())
+        //     .or_default()
+        //     .value += self.qty.value;
+
+        // state.ticker_nonce += 1;
 
         Ok(HandlerResult::Write(state))
     }

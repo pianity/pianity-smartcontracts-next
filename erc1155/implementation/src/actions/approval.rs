@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use async_trait::async_trait;
 
 use warp_erc1155::action::ActionResult;
 use warp_erc1155::action::HandlerResult;
@@ -7,18 +7,25 @@ use warp_erc1155::action::ReadResponse;
 use warp_erc1155::action::SetApprovalForAll;
 use warp_erc1155::state::State;
 
-use super::Actionable;
+use crate::{actions::AsyncActionable, state::KvState};
 
-pub fn is_approved_for_all_internal(state: &State, operator: &str, owner: &str) -> bool {
-    match state.approvals.get(owner) {
-        Some(approved_ops) => approved_ops.get(operator).unwrap_or(&false).to_owned(),
-        None => false,
-    }
-}
+// pub async fn is_approved_for_all_internal(operator: &str, owner: &str) -> bool {
+//     return KvState::approvals(owner).approvals(operator).value().await;
+//     // match state.approvals.get(owner) {
+//     //     Some(approved_ops) => approved_ops.get(operator).unwrap_or(&false).to_owned(),
+//     //     None => false,
+//     // }
+// }
 
-impl Actionable for IsApprovedForAll {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
-        let approved = is_approved_for_all_internal(&state, &self.operator, &self.owner);
+#[async_trait(?Send)]
+impl AsyncActionable for IsApprovedForAll {
+    async fn action(self, caller: String, mut state: State) -> ActionResult {
+        // let approved = is_approved_for_all_internal(&state, &self.operator, &self.owner);
+        let approved = !KvState::approvals(&self.owner)
+            .peek()
+            .approves(&self.operator)
+            .await
+            .unwrap_or(false);
 
         Ok(HandlerResult::Read(
             state,
@@ -31,17 +38,25 @@ impl Actionable for IsApprovedForAll {
     }
 }
 
-impl Actionable for SetApprovalForAll {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
-        if let Some(approved_ops) = state.approvals.get_mut(&caller) {
-            approved_ops.insert(self.operator, self.approved);
-        } else {
-            let mut approved_ops = HashMap::new();
-            approved_ops.insert(self.operator, self.approved);
+#[async_trait(?Send)]
+impl AsyncActionable for SetApprovalForAll {
+    async fn action(self, caller: String, mut state: State) -> ActionResult {
+        KvState::approvals(&caller)
+            .init_default()
+            .await
+            .approves(&self.operator)
+            .set(&self.approved)
+            .await;
 
-            state.approvals.insert(caller, approved_ops);
-        };
+        // if let Some(approved_ops) = state.approvals.get_mut(&caller) {
+        //     approved_ops.insert(self.operator, self.approved);
+        // } else {
+        //     let mut approved_ops = HashMap::new();
+        //     approved_ops.insert(self.operator, self.approved);
+        //
+        //     state.approvals.insert(caller, approved_ops);
+        // };
 
-        Ok(HandlerResult::Write(state))
+        Ok(HandlerResult::None(state))
     }
 }

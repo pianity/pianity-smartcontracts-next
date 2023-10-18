@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use serde::{de::DeserializeOwned, Serialize};
 
-pub use kv_macro::kv_storage as kv_storage_macro;
+pub use kv_macro::kv_storage as kv;
 
 #[async_trait(?Send)]
 pub trait KvStorage {
     async fn put<T: Serialize>(key: &str, value: &T);
-    async fn get<T: DeserializeOwned>(key: &str) -> T;
-    async fn del(key: &str);
+    async fn get<T: DeserializeOwned>(key: &str) -> Option<T>;
+    // async fn del(key: &str);
 }
 
 // #[async_trait(?Send)]
@@ -33,12 +33,14 @@ pub trait KvStorage {
 
 #[cfg(test)]
 mod tests {
-    use super::{kv_storage_macro, KvStorage};
+    use std::collections::HashMap;
+
+    use crate::{kv, KvStorage};
     use async_trait::async_trait;
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
     use serde_json;
 
-    struct Kv;
+    pub struct Kv;
 
     #[async_trait(?Send)]
     impl KvStorage for Kv {
@@ -49,90 +51,200 @@ mod tests {
             );
         }
 
-        async fn get<T: DeserializeOwned>(key: &str) -> T {
+        async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
             println!("{}", &format!("get: {}", key));
 
             match key {
-                ".name" => serde_json::from_str("\"hello\"").unwrap(),
-                ".tokens.bob" => {
-                    serde_json::from_str(r#"{ "name": "bob", "balance": 0 }"#).unwrap()
-                }
-                ".settings.paused" => serde_json::from_str("false").unwrap(),
-                _ => serde_json::from_str("{}").unwrap(),
+                ".the_name" => Some(serde_json::from_str("\"hello\"").unwrap()),
+                // ".tokens.bob" => {
+                //     Some(serde_json::from_str(r#"{ "name": "bob", "balance": 0 }"#).unwrap())
+                // }
+                ".tokens.PTY.name" => Some(serde_json::from_str(r#""PTY""#).unwrap()),
+                ".tokens.PTY.balances.bob" => Some(serde_json::from_str(r#"123"#).unwrap()),
+                ".settings.paused" => Some(serde_json::from_str("false").unwrap()),
+                _ => None,
             }
 
             // serde_json::from_str("\"bonjour\"").unwrap()
         }
 
-        async fn del(key: &str) {
-            println!("{}", &format!("del: {}", key));
-        }
+        // async fn del(key: &str) {
+        //     println!("{}", &format!("del: {}", key));
+        // }
     }
 
-    // fn test<T: KvStorage>() {
-    //     T::put("foo", JsValue::from("bar"));
-    // }
-
-    #[derive(Serialize, Deserialize, Debug)]
-    enum Bob {
-        Foo,
-        Bar,
-    }
-
-    #[kv_storage_macro(kv = "Kv")]
+    #[kv(impl = "Kv")]
     struct State {
-        name: String,
-        #[kv_storage_macro(subpath)]
+        the_name: Option<String>,
+        #[kv(subpath)]
         settings: Settings,
-        #[kv_storage_macro(map)]
+        #[kv(map, subpath)]
         tokens: Token,
+        // tokens: u32,
     }
 
-    #[kv_storage_macro(kv = "Kv", subpath)]
+    #[kv(impl = "Kv", subpath)]
     struct Settings {
         paused: bool,
         rate: u32,
-        #[kv_storage_macro(subpath)]
-        sub_settings: SubSettings,
     }
 
-    #[kv_storage_macro(kv = "Kv", subpath)]
-    struct SubSettings {
-        sub: bool,
-    }
-
-    // #[kv_storage_macro(kv = "Kv", subpath)]
-    #[derive(Serialize, Deserialize, Debug)]
+    #[kv(impl = "Kv", subpath)]
     struct Token {
         name: String,
-        balance: u32,
+        #[kv(map)]
+        balances: u32,
+    }
+
+    fn capitalize(string: &str) -> String {
+        let (first, rest) = string.split_at(1);
+        format!("{}{}", first.to_ascii_uppercase(), rest)
+    }
+
+    fn test() -> Result<(), &'static str> {
+        let mut test = Some(Some(Some("hello")));
+
+        let test2 = test.ok_or("err")?.ok_or("err")?.ok_or("err")?;
+
+        Ok(())
+
+        // let string = "hello_world";
+        // let splited = string
+        //     .split('_')
+        //     .map(capitalize)
+        //     .collect::<Vec<_>>()
+        //     .join("");
+        // Some(1).map(|x| x + 1);
+        // // String::default().split_at_mut;
+    }
+
+    fn overwrite() {
+        println!("hello");
     }
 
     #[tokio::test]
     async fn test_macro() {
-        let name = State::name().value().await;
-        let bob = State::tokens("bob").value().await;
-        let paused = State::settings().paused().value().await;
+        // State::default().init().await;
+        let init_state = State {
+            // name: Some("hello".to_string()),
+            the_name: None,
+            settings: Settings {
+                paused: false,
+                rate: 0,
+            },
+            tokens: HashMap::from([
+                (
+                    String::from("PTY"),
+                    Token {
+                        name: String::from("PTYname"),
+                        balances: HashMap::from([
+                            (String::from("bob"), 123),
+                            (String::from("alice"), 321),
+                        ]),
+                    },
+                ),
+                (
+                    String::from("PIA"),
+                    Token {
+                        name: String::from("PIAname"),
+                        balances: HashMap::from([
+                            (String::from("alfred"), 456),
+                            (String::from("david"), 654),
+                        ]),
+                    },
+                ),
+            ]),
+        }
+        .init()
+        .await;
 
-        println!("{}, {:?}, {}", name, bob, paused);
+        println!("-------------");
 
-        // let paused = State::settings().sub_settings().sub().value().await;
-        // let value = paused.value().await;
+        println!("thename: {:?}", State::the_name().get().await);
 
-        // State::name().set_value(String::from("hello")).await;
+        // let bobsBalance = State::tokens("PTY")
+        //     .init_default()
+        //     .await
+        //     .balances("bob")
+        //     .peek()
+        //     .await;
+        // println!("bobsBalance: {:?}", bobsBalance);
+
+        // State::tokens("BOB").set(&Token::default()).await;
+
+        // let token = State::tokens("PTY")
+        //     .init_default()
+        //     .await
+        //     .balances("bob")
+        //     .init_default()
+        //     .await
+        //     .map(|x| x + 1)
+        //     .await;
+
+        // .get()
+        // .await;
+
+        // println!("{}", token);
+
+        // let name = State::tokens("bob").name().value().await;
+        // let name = State::tokens("bob").init();
+        // println!("{:?}", name);
+
         // let name = State::name().value().await;
+        // // let bob = State::tokens("PTY").name().value().await;
+        // let paused = State::settings().paused().value().await;
         //
-        // State::tokens("PTY")
-        //     .set_value(Token {
-        //         name: String::from("hello"),
-        //         balances: 0,
-        //     })
+        // // let op = Some(1).unwrap_or_default
+        //
+        // let map = HashMap::from([("bob", 1)]);
+        // // map.entry("bob").or_default
+        //
+        // let balance = State::settings()
+        //     .init()
+        //     .or_init_default()
+        //     // .await()
+        //     .balances("bob")
+        //     .value()
+        //     // .set()
         //     .await;
         //
-        // println!("TEST {:?}", name);
-        // // let name =
-        // // println!("TEST {:?}", tokio_test::block_on(state().value()));
-        // // foo();
+        // println!("bob {:?}", balance);
+        //
+        // // let state = State::init_or(State {
+        // //     name: String::from("Pianity"),
+        // //     settings: Settings::default(),
+        // //     tokens: HashMap::from([(
+        // //         String::from("bob"),
+        // //         Token {
+        // //             name: String::from("PTY"),
+        // //             balances: HashMap::new(),
+        // //         },
+        // //     )]),
+        // // });
+        // // let token = State::tokens("bob"); // <-- Wouldn't be `Token`, but instead a `MaybeToken`
+        // // let token = State::tokens("bob").or_else(|| MyError)?;
+        // // let token = State::tokens("bob").or_init(|| );
+        // // token.name().set_value
+        //
+        // // println!("{}, {:?}, {}", name, bob, paused);
+        //
+        // // let paused = State::settings().sub_settings().sub().value().await;
+        // // let value = paused.value().await;
+        //
+        // // State::name().set_value(String::from("hello")).await;
+        // // let name = State::name().value().await;
+        // //
+        // // State::tokens("PTY")
+        // //     .set_value(Token {
+        // //         name: String::from("hello"),
+        // //         balances: 0,
+        // //     })
+        // //     .await;
+        // //
+        // // println!("TEST {:?}", name);
+        // // // let name =
+        // // // println!("TEST {:?}", tokio_test::block_on(state().value()));
+        // // // foo();
     }
 }
 

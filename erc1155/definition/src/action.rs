@@ -109,6 +109,7 @@ pub enum ReadResponse {
 pub enum HandlerResult {
     Write(State),
     Read(State, ReadResponse),
+    None(State),
 }
 
 pub type ActionResult = Result<HandlerResult, ContractError>;
