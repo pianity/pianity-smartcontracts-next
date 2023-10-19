@@ -1,5 +1,5 @@
 [package]
-name = "kv_macro"
+name = "kv-macro"
 version = "0.1.0"
 edition = "2021"
 
