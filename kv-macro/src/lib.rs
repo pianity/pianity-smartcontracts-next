@@ -113,7 +113,7 @@ fn gen_field_name(
     field_name: &Ident,
     field_args: &FieldArgs,
     macro_args: &MacroArgs,
-    return_type: Ident,
+    return_type: TokenStream,
 ) -> TokenStream {
     let mut fun_args: Vec<TokenStream> = Vec::new();
     let mut path_args = Vec::new();
@@ -145,9 +145,17 @@ fn gen_field_name(
         }
     };
 
-    quote! {
-        pub fn #field_name(#(#fun_args),*) -> #return_type {
-            #return_type(format!(#format_str, #(#path_args),*))
+    if !field_args.subpath {
+        quote! {
+            pub fn #field_name(#(#fun_args),*) -> #return_type {
+                #return_type(format!(#format_str, #(#path_args),*))
+            }
+        }
+    } else {
+        quote! {
+            pub fn #field_name(#(#fun_args),*) -> #return_type {
+                #return_type(format!(#format_str, #(#path_args),*), std::marker::PhantomData)
+            }
         }
     }
 }
@@ -193,13 +201,13 @@ fn gen_field_peek(
     if !field_args.subpath {
         quote! {
             pub async fn #field_name(#(#fun_args),*) -> Option<#return_type> {
-                #kv_struct::get::<#return_type>(&format!(#format_str, #(#path_args),*)).await
+                T::get::<#return_type>(&format!(#format_str, #(#path_args),*)).await
             }
         }
     } else {
         quote! {
             pub fn #field_name(#(#fun_args),*) -> #return_type {
-                #return_type(format!(#format_str, #(#path_args),*))
+                #return_type(format!(#format_str, #(#path_args),*), std::marker::PhantomData)
             }
         }
     }
@@ -232,7 +240,7 @@ fn create_peek_struct(
                     panic!("I'm afraid I cannot let you do that, Dave");
                 };
                 let peek_ident = format_ident!("Peek{}", type_ident);
-                quote!(#peek_ident)
+                quote!(#peek_ident::<T>)
             };
 
             gen_field_peek(field_name, &field_args, &macro_args, return_type)
@@ -242,9 +250,9 @@ fn create_peek_struct(
     let peek_struct_name = format_ident!("{}{}", "Peek", struct_ident);
 
     let peek_struct = quote! {
-        pub struct #peek_struct_name(pub String);
+        pub struct #peek_struct_name<T: KvStorage>(pub String, std::marker::PhantomData<T>);
 
-        impl #peek_struct_name {
+        impl<T : KvStorage> #peek_struct_name<T> {
             #(#peek_methods)*
         }
     };
@@ -287,13 +295,16 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
 
                 let return_type = if field_args.subpath {
                     if let syn::Type::Path(type_path) = &field_type {
-                        let ident = type_path.path.segments.last().unwrap().ident.clone();
-                        format_ident!("Subpath{}", &ident)
+                        let ident = format_ident!(
+                            "Subpath{}",
+                            type_path.path.segments.last().unwrap().ident.clone()
+                        );
+                        quote!(#ident::<T>)
                     } else {
                         panic!("I'm afraid I cannot let you do that, Dave");
                     }
                 } else {
-                    field_struct_name.clone()
+                    quote!(#field_struct_name::<T>)
                 };
 
                 let field_maybe_struct_name = format_ident!("{}{}", "Maybe", field_struct_name);
@@ -306,47 +317,47 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     let peek_struct_name = format_ident!("{}{}", "Peek", field_type_name);
                     let peek_method = if field_args.subpath {
                         quote! {
-                            pub fn peek(&self) -> #peek_struct_name {
-                                #peek_struct_name(self.0.clone())
+                            pub fn peek(&self) -> #peek_struct_name<T> {
+                                #peek_struct_name::<T>(self.0.clone())
                             }
                         }
                     } else {
                         quote! {
                             pub async fn peek(&self) -> Option<#field_type> {
-                                #kv_struct::get::<#field_type>(&self.0).await
+                                T::get::<#field_type>(&self.0).await
                             }
                         }
                     };
 
                     let exists_steps = if !field_args.subpath {
                         quote! {
-                            #kv_struct::get::<u8>(&self.0).await.is_some()
+                            T::get::<u8>(&self.0).await.is_some()
                         }
                     } else {
                         quote! {
-                            #kv_struct::get::<u8>(&format!("{}.-", self.0)).await.is_some_and(|v| v == 1)
+                            T::get::<u8>(&format!("{}.-", self.0)).await.is_some_and(|v| v == 1)
                         }
                     };
 
                     let init_steps = if !field_args.subpath {
                         quote! {
-                            #kv_struct::put::<#field_type>(&self.0, &default).await;
+                            T::put::<#field_type>(&self.0, &default).await;
                         }
                     } else {
                         quote! {
                             default.init(self.0.clone()).await;
-                            #kv_struct::put::<u8>(&format!("{}.-", self.0), &1).await;
+                            T::put::<u8>(&format!("{}.-", self.0), &1).await;
                         }
                     };
 
                     let init_default_steps = if !field_args.subpath {
                         quote! {
-                            #kv_struct::put::<#field_type>(&self.0, &#field_type::default()).await;
+                            T::put::<#field_type>(&self.0, &#field_type::default()).await;
                         }
                     } else {
                         quote! {
                             #field_type::default().init(self.0.clone()).await;
-                            #kv_struct::put::<u8>(&format!("{}.-", self.0), &1).await;
+                            T::put::<u8>(&format!("{}.-", self.0), &1).await;
                         }
                     };
 
@@ -356,10 +367,10 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                             where
                                 F: FnOnce(#field_type) -> #field_type,
                             {
-                                let value = #kv_struct::get::<#field_type>(&self.0).await;
+                                let value = T::get::<#field_type>(&self.0).await;
 
                                 if let Some(value) = value {
-                                    #kv_struct::put::<#field_type>(&self.0, &map_fn(value)).await;
+                                    T::put::<#field_type>(&self.0, &map_fn(value)).await;
                                 }
 
                                 self
@@ -372,7 +383,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     let set_method = if !field_args.subpath {
                         quote! {
                             pub async fn set(&self, value: &#field_type) {
-                                #kv_struct::put::<#field_type>(&self.0, value).await;
+                                T::put::<#field_type>(&self.0, value).await;
                             }
                         }
                     } else {
@@ -383,20 +394,26 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                         }
                     };
 
-                    quote! {
-                        pub struct #field_maybe_struct_name(pub String);
+                    let marker = if field_args.subpath {
+                        quote!(, std::marker::PhantomData)
+                    } else {
+                        quote!()
+                    };
 
-                        impl #field_maybe_struct_name {
+                    quote! {
+                        pub struct #field_maybe_struct_name<T: KvStorage>(pub String, std::marker::PhantomData<T>);
+
+                        impl<T: KvStorage> #field_maybe_struct_name<T> {
                             pub async fn exists(&self) -> bool {
                                 #exists_steps
                             }
 
-                            pub async fn ok_or<T>(&self, err: T) -> Result<#return_type, T>
+                            pub async fn ok_or<F>(&self, err: F) -> Result<#return_type, F>
                             where
-                                T: std::fmt::Debug,
+                                F: std::fmt::Debug,
                             {
                                 if self.exists().await {
-                                    Ok(#return_type(self.0.clone()))
+                                    Ok(#return_type(self.0.clone() #marker))
                                 } else {
                                     Err(err)
                                 }
@@ -407,7 +424,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                                     #init_steps
                                 }
 
-                                #return_type(self.0.clone())
+                                #return_type(self.0.clone() #marker)
                             }
 
                             // pub async fn overwrite(&self, value: &#field_type) -> #return_type {
@@ -421,7 +438,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                                     #init_default_steps
                                 }
 
-                                #return_type(self.0.clone())
+                                #return_type(self.0.clone() #marker)
                             }
 
                             #peek_method
@@ -438,7 +455,11 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                 let return_type = if !field_args.map {
                     return_type
                 } else {
-                    field_maybe_struct_name
+                    if field_args.subpath {
+                        quote!(#field_maybe_struct_name::<T>)
+                    } else {
+                        quote!(#field_maybe_struct_name)
+                    }
                 };
 
                 (
@@ -453,28 +474,25 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                         quote! {
                             #field_maybe_struct
 
-                            pub struct #field_struct_name(pub String);
+                            pub struct #field_struct_name<T: KvStorage>(pub String, std::marker::PhantomData<T>);
 
-                            impl #field_struct_name {
+                            impl<T: KvStorage> #field_struct_name<T> {
                                 pub async fn get(&self) -> #field_type {
-                                    println!("HELLO WORLD");
-                                    let stuff = #kv_struct::get(&self.0).await.unwrap();
-                                    println!("after");
-                                    stuff
+                                    T::get(&self.0).await.unwrap()
                                 }
 
                                 pub async fn set(&self, value: &#field_type) {
-                                    #kv_struct::put::<#field_type>(&self.0, value).await;
+                                    T::put::<#field_type>(&self.0, value).await;
                                 }
 
                                 pub async fn map<F>(&self, map_fn: F) -> &Self
                                 where
                                     F: FnOnce(#field_type) -> #field_type,
                                 {
-                                    let value = #kv_struct::get::<#field_type>(&self.0).await;
+                                    let value = T::get::<#field_type>(&self.0).await;
 
                                     if let Some(value) = value {
-                                        #kv_struct::put::<#field_type>(&self.0, &map_fn(value)).await;
+                                        T::put::<#field_type>(&self.0, &map_fn(value)).await;
                                     }
 
                                     self
@@ -505,10 +523,23 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
             .map(|field| {
                 let field_name = field.ident.as_ref().unwrap();
                 let field_args: FieldArgs = field.attrs.clone().into();
-                let field_type = transform_field_type(&field.ty, field_args.map);
+                let field_type = &field.ty;
+                let field_new_type = {
+                    let new_type = if field_args.map {
+                        quote!(std::collections::HashMap<String, #field_type>)
+                    } else {
+                        quote!(#field_type)
+                    };
+
+                    if field_args.subpath {
+                        quote!(#new_type<T>)
+                    } else {
+                        new_type
+                    }
+                };
 
                 quote! {
-                    pub #field_name: #field_type
+                    pub #field_name: #field_new_type
                 }
             })
             .collect();
@@ -534,7 +565,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
 
                     if !field_args.subpath {
                         quote! {
-                            #kv_struct::put::<#field_type>(#path, &self.#field_name).await
+                            T::put::<#field_type>(#path, &self.#field_name).await
                         }
                     } else {
                         quote! {
@@ -553,14 +584,14 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     if !field_args.subpath {
                         quote! {
                             for (key, value) in self.#field_name.iter() {
-                                #kv_struct::put::<#field_type>(&#path, &value).await
+                                T::put::<#field_type>(&#path, &value).await
                             }
                         }
                     } else {
                         quote! {
                             for (key, value) in self.#field_name.iter() {
                                 value.init(#path).await;
-                                #kv_struct::put::<u8>(&format!("{}.-", #path), &1).await;
+                                T::put::<u8>(&format!("{}.-", #path), &1).await;
                             }
                         }
                     }
@@ -583,11 +614,12 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
         let storage = if !macro_args.subpath {
             quote! {
                 #[derive(Default, Serialize, Deserialize)]
-                pub struct #root_struct_name {
+                pub struct #root_struct_name<T: KvStorage> {
+                    _marker: std::marker::PhantomData<T>,
                     #(#cons_fields),*
                 }
 
-                impl #root_struct_name {
+                impl<T: KvStorage> #root_struct_name<T> {
                     #init_method
 
                     #(#storage_fields)*
@@ -598,17 +630,18 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
 
             quote! {
                 #[derive(Default, Serialize, Deserialize)]
-                pub struct #root_struct_name {
+                pub struct #root_struct_name<T: KvStorage> {
+                    _marker: std::marker::PhantomData<T>,
                     #(#cons_fields),*
                 }
 
-                impl #root_struct_name {
+                impl<T: KvStorage> #root_struct_name<T> {
                     #init_method
                 }
 
-                pub struct #accessor_struct_name(pub String);
+                pub struct #accessor_struct_name<T: KvStorage>(pub String, std::marker::PhantomData<T>);
 
-                impl #accessor_struct_name {
+                impl<T: KvStorage> #accessor_struct_name<T> {
                     #(#storage_fields)*
                 }
             }

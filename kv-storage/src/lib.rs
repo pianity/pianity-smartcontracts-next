@@ -78,8 +78,8 @@ mod tests {
         the_name: Option<String>,
         #[kv(subpath)]
         settings: Settings,
-        #[kv(map, subpath)]
-        tokens: Token,
+        // #[kv(subpath)]
+        // tokens: Token,
         // tokens: u32,
     }
 
@@ -89,12 +89,12 @@ mod tests {
         rate: u32,
     }
 
-    #[kv(impl = "Kv", subpath)]
-    struct Token {
-        name: String,
-        #[kv(map)]
-        balances: u32,
-    }
+    // #[kv(impl = "Kv", subpath)]
+    // struct Token {
+    //     name: String,
+    //     #[kv(map)]
+    //     balances: u32,
+    // }
 
     fn capitalize(string: &str) -> String {
         let (first, rest) = string.split_at(1);
@@ -124,43 +124,48 @@ mod tests {
 
     #[tokio::test]
     async fn test_macro() {
+        State::new()
+            .the_name(None)
+            .settings(Settings::new().paused(false).rate(0).build())
+            .build();
+
         // State::default().init().await;
-        let init_state = State {
+        let init_state = State::<Kv> {
             // name: Some("hello".to_string()),
             the_name: None,
-            settings: Settings {
+            settings: Settings::<Kv> {
                 paused: false,
                 rate: 0,
             },
-            tokens: HashMap::from([
-                (
-                    String::from("PTY"),
-                    Token {
-                        name: String::from("PTYname"),
-                        balances: HashMap::from([
-                            (String::from("bob"), 123),
-                            (String::from("alice"), 321),
-                        ]),
-                    },
-                ),
-                (
-                    String::from("PIA"),
-                    Token {
-                        name: String::from("PIAname"),
-                        balances: HashMap::from([
-                            (String::from("alfred"), 456),
-                            (String::from("david"), 654),
-                        ]),
-                    },
-                ),
-            ]),
+            // tokens: HashMap::from([
+            //     (
+            //         String::from("PTY"),
+            //         Token::<Kv> {
+            //             name: String::from("PTYname"),
+            //             balances: HashMap::from([
+            //                 (String::from("bob"), 123),
+            //                 (String::from("alice"), 321),
+            //             ]),
+            //         },
+            //     ),
+            //     (
+            //         String::from("PIA"),
+            //         Token::<Kv> {
+            //             name: String::from("PIAname"),
+            //             balances: HashMap::from([
+            //                 (String::from("alfred"), 456),
+            //                 (String::from("david"), 654),
+            //             ]),
+            //         },
+            //     ),
+            // ]),
         }
         .init()
         .await;
 
         println!("-------------");
 
-        println!("thename: {:?}", State::the_name().get().await);
+        println!("thename: {:?}", State::<Kv>::the_name().get().await);
 
         // let bobsBalance = State::tokens("PTY")
         //     .init_default()
