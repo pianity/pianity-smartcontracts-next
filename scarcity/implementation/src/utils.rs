@@ -1,13 +1,24 @@
-use warp_scarcity::{action::Scarcity, state::State};
+use warp_scarcity::{action::Scarcity, state::Parameters};
 
-use crate::contract_utils::js_imports::log;
+use crate::{contract_utils::js_imports::log, state::State};
 
-pub fn is_op(state: &State, address: &str) -> bool {
-    is_super_op(state, address) || state.settings.operators.contains(&address.into())
+pub async fn is_op(address: &str) -> bool {
+    State::settings()
+        .operators()
+        .get()
+        .await
+        .contains(&address.into())
+    // true
+    // is_super_op(state, address) || state.settings.operators.contains(&address.into())
 }
 
-pub fn is_super_op(state: &State, address: &str) -> bool {
-    state.settings.super_operators.contains(&address.into())
+pub async fn is_super_op(address: &str) -> bool {
+    State::settings()
+        .super_operators()
+        .get()
+        .await
+        .contains(&address.into())
+    // state.settings.super_operators.contains(&address.into())
 }
 
 // TODO: This code is mostly duplicated from the Shuffle contract. It should be refactored to be

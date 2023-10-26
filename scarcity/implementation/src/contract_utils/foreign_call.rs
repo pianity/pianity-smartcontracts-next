@@ -11,7 +11,7 @@ use crate::contract_utils::js_imports::SmartWeave;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ForeignContractState {
-    Erc1155(warp_erc1155::state::State),
+    Erc1155(warp_erc1155::state::Parameters),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
-use crate::state::{Royalties, State};
+use crate::state::{Parameters, Royalties};
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -131,8 +131,9 @@ pub enum ReadResponse {
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum HandlerResult {
-    Write(State),
-    Read(State, ReadResponse),
+    Write(Parameters),
+    Read(Parameters, ReadResponse),
+    None(Parameters),
 }
 
 pub type ActionResult = Result<HandlerResult, ContractError>;

@@ -1,14 +1,20 @@
+use async_trait::async_trait;
 use warp_scarcity::{
     action::{ActionResult, AttachRoyalties, HandlerResult},
     error::ContractError,
-    state::{AttachedRoyalties, State, UNIT},
+    state::{Parameters, UNIT},
 };
 
-use crate::actions::Actionable;
+use crate::{
+    actions::Actionable,
+    contract_utils::foreign_call::ForeignContractCaller,
+    state::{AttachedRoyalties, State},
+};
 
-pub fn attach_royalties_internal(
+use super::AsyncActionable;
+
+pub async fn attach_royalties_internal(
     attach_royalties: &AttachRoyalties,
-    state: &mut State,
 ) -> Result<(), ContractError> {
     if attach_royalties.rate > UNIT {
         return Err(ContractError::InvalidRate);
@@ -26,21 +32,35 @@ pub fn attach_royalties_internal(
         return Err(ContractError::InvalidRoyalties);
     }
 
-    state.all_attached_royalties.insert(
-        attach_royalties.base_id.clone(),
-        AttachedRoyalties {
+    // state.all_attached_royalties.insert(
+    //     attach_royalties.base_id.clone(),
+    //     AttachedRoyalties {
+    //         base_id: attach_royalties.base_id.clone(),
+    //         royalties: attach_royalties.royalties.clone(),
+    //         rate: attach_royalties.rate,
+    //     },
+    // );
+
+    State::all_attached_royalties(&attach_royalties.base_id)
+        .set(&AttachedRoyalties {
             base_id: attach_royalties.base_id.clone(),
             royalties: attach_royalties.royalties.clone(),
             rate: attach_royalties.rate,
-        },
-    );
+        })
+        .await;
 
     Ok(())
 }
 
-impl Actionable for AttachRoyalties {
-    fn action(self, _caller: String, mut state: State) -> ActionResult {
-        if state.all_attached_royalties.contains_key(&self.base_id) {
+#[async_trait(?Send)]
+impl AsyncActionable for AttachRoyalties {
+    async fn action(
+        self,
+        _caller: String,
+        state: Parameters,
+        _foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
+        if State::all_attached_royalties(&self.base_id).exists().await {
             return Err(ContractError::TokenAlreadyExists(self.base_id));
         }
 
@@ -74,8 +94,8 @@ impl Actionable for AttachRoyalties {
         //     //     Err(ContractError::TokenIsNotAnNFT(id.to_string()))
         //     // })?;
 
-        attach_royalties_internal(&self, &mut state)?;
+        attach_royalties_internal(&self).await?;
 
-        Ok(HandlerResult::Write(state))
+        Ok(HandlerResult::None(state))
     }
 }

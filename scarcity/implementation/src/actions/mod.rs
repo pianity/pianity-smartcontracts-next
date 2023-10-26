@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use warp_scarcity::{action::ActionResult, state::State};
+use warp_scarcity::{action::ActionResult, state::Parameters};
 
 pub mod attach_royalties;
 pub mod batch;
@@ -21,7 +21,7 @@ pub use transfer::*;
 use crate::contract_utils::foreign_call::ForeignContractCaller;
 
 pub trait Actionable {
-    fn action(self, caller: String, state: State) -> ActionResult;
+    fn action(self, caller: String, state: Parameters) -> ActionResult;
 }
 
 #[async_trait(?Send)]
@@ -29,7 +29,7 @@ pub trait AsyncActionable {
     async fn action(
         self,
         caller: String,
-        state: State,
+        state: Parameters,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult;
 }

@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use kv_storage::{kv, KvStorage};
+
+use crate::contract_utils::js_imports::Kv;
 
 // TODO: Find a way to export `UNIT` via schemars or put it in `Settings`.
 /// The exact amount that all the sum of all the royalties of a token must be equal to.
@@ -12,8 +15,7 @@ pub const UNIT: u32 = 1_000_000;
  */
 pub type Royalties = HashMap<String, u32>;
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[kv(impl = "Kv")]
 pub struct AttachedRoyalties {
     pub base_id: String,
     pub royalties: Royalties,
@@ -33,8 +35,7 @@ pub struct AttachedRoyalties {
     // pub minter: String,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
+#[kv(impl = "Kv", subpath)]
 pub struct Settings {
     pub paused: bool,
 
@@ -53,21 +54,11 @@ pub struct Settings {
     pub custodian: String,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct InitialState {
-    pub settings: Settings,
-    pub attached_royalties: HashMap<String, AttachedRoyalties>,
-}
-
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Parameters {
-    pub name: String,
-
-    pub initial_state: Option<InitialState>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub evolve: Option<String>,
-    pub can_evolve: bool,
+// #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
+#[kv(impl = "Kv")]
+pub struct State {
+    #[kv(subpath)]
+    settings: Settings,
+    #[kv(map)]
+    all_attached_royalties: AttachedRoyalties,
 }

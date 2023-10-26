@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::{
     action::{self as Erc1155Action},
     error::ContractError as Erc1155ContractError,
-    state::{Balance, BalancePrecision, State as Erc1155State},
+    state::{Balance, BalancePrecision, Parameters as Erc1155State},
 };
 
 use warp_scarcity::{
     action::{ActionResult, AttachRoyalties, HandlerResult, Transfer},
     error::ContractError,
-    state::{AttachedRoyalties, Royalties, State, UNIT},
+    state::{AttachedRoyalties, Parameters, Royalties, UNIT},
 };
 use wasm_bindgen::UnwrapThrowExt;
 
@@ -20,38 +20,39 @@ use crate::{
         foreign_call::{ForeignContractCaller, ForeignContractState},
         js_imports::log,
     },
+    state::State,
     utils::{NftId, ShuffleId, TokenId},
 };
 
-async fn get_token_owner(
-    foreign_caller: &mut ForeignContractCaller,
-    erc1155: &str,
-    nft_id: &str,
-) -> Result<String, ContractError> {
-    let state = match foreign_caller
-        .read(&erc1155.to_string())
-        .await
-        .map_err(|_err| ContractError::Erc1155ReadFailed)?
-    {
-        ForeignContractState::Erc1155(state) => state,
-    };
-
-    let token = state
-        .tokens
-        .get(nft_id)
-        .ok_or(ContractError::TokenOwnerNotFound)?;
-
-    let owner = token.balances.iter().next().unwrap_throw();
-
-    Ok(owner.0.clone())
-}
+// async fn get_token_owner(
+//     foreign_caller: &mut ForeignContractCaller,
+//     erc1155: &str,
+//     nft_id: &str,
+// ) -> Result<String, ContractError> {
+//     let state = match foreign_caller
+//         .read(&erc1155.to_string())
+//         .await
+//         .map_err(|_err| ContractError::Erc1155ReadFailed)?
+//     {
+//         ForeignContractState::Erc1155(state) => state,
+//     };
+//
+//     let token = state
+//         .tokens
+//         .get(nft_id)
+//         .ok_or(ContractError::TokenOwnerNotFound)?;
+//
+//     let owner = token.balances.iter().next().unwrap_throw();
+//
+//     Ok(owner.0.clone())
+// }
 
 #[async_trait(?Send)]
 impl AsyncActionable for Transfer {
     async fn action(
         self,
         _caller: String,
-        state: State,
+        state: Parameters,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
         let qty = self.qty.unwrap_or(Balance::new(1));
@@ -72,18 +73,24 @@ impl AsyncActionable for Transfer {
             _ => Err(ContractError::InvalidTokenId),
         }?;
 
-        let attached_royalties = state
-            .all_attached_royalties
-            .get(&base_id)
-            // TODO: Rename TokenNotFound to NoRoyaltiesAttached
-            .ok_or_else(|| ContractError::TokenNotFound(self.token_id.clone()))?;
+        // let attached_royalties = state
+        //     .all_attached_royalties
+        //     .get(&base_id)
+        //     // TODO: Rename TokenNotFound to NoRoyaltiesAttached
+        //     .ok_or_else(|| ContractError::TokenNotFound(self.token_id.clone()))?;
+
+        let state_attached_royalties = State::all_attached_royalties(&base_id)
+            .ok_or(ContractError::TokenNotFound(self.token_id.clone()))
+            .await?;
+
+        let attached_royalties = state_attached_royalties.get().await;
 
         // let nft_owner =
         //     get_token_owner(foreign_caller, &state.settings.erc1155, &self.token_id).await?;
 
         let token_owner = self.from.clone();
 
-        let is_resell = self.from != state.settings.custodian;
+        let is_resell = self.from != State::settings().custodian().get().await;
 
         let rate = if is_resell {
             attached_royalties.rate
@@ -142,7 +149,7 @@ impl AsyncActionable for Transfer {
 
         foreign_caller
             .write::<Erc1155ContractError, Erc1155Action::Action>(
-                &state.settings.erc1155,
+                &State::settings().erc1155().get().await,
                 transaction_batch,
             )
             .await
