@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ContractError;
-use crate::state::{Balance, BalancePrecision, State};
+use crate::state::{Balance, BalancePrecision, Parameters};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -87,8 +87,8 @@ pub enum Action {
     Batch(Batch),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase", untagged)]
+#[derive(JsonSchema, Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub enum ReadResponse {
     Balance {
         balance: BalancePrecision,
@@ -107,9 +107,9 @@ pub enum ReadResponse {
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum HandlerResult {
-    Write(State),
-    Read(State, ReadResponse),
-    None(State),
+    Write(Parameters),
+    Read(Parameters, ReadResponse),
+    None(Parameters),
 }
 
 pub type ActionResult = Result<HandlerResult, ContractError>;

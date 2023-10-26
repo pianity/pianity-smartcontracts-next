@@ -1,15 +1,15 @@
 use async_trait::async_trait;
 use warp_erc1155::action::{ActionResult, Burn, HandlerResult};
 use warp_erc1155::error::ContractError;
-use warp_erc1155::state::State;
+use warp_erc1155::state::Parameters;
 
 use crate::state::{Balance, KvState};
 use crate::{actions::AsyncActionable, utils::is_op};
 
 #[async_trait(?Send)]
 impl AsyncActionable for Burn {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
-        if !is_op(&state, &caller) {
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
+        if !is_op(&caller).await {
             return Err(ContractError::UnauthorizedAddress(caller));
         }
 

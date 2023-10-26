@@ -4,15 +4,15 @@
 
 use std::cell::RefCell;
 
-// use serde_json::Error;
 use wasm_bindgen::prelude::*;
 
-use crate::contract;
-use warp_erc1155::action::{Action, HandlerResult};
-use warp_erc1155::error::ContractError;
-use warp_erc1155::state::State;
+use warp_erc1155::{
+    action::{Action, HandlerResult},
+    error::ContractError,
+    state::Parameters,
+};
 
-use super::js_imports::log;
+use crate::contract;
 
 /*
 Note: in order do optimize communication between host and the WASM module,
@@ -44,7 +44,7 @@ In the future this might also allow to enhance the inner-contracts communication
 
 // inspired by https://github.com/dfinity/examples/blob/master/rust/basic_dao/src/basic_dao/src/lib.rs#L13
 thread_local! {
-    static STATE: RefCell<State> = RefCell::default();
+    static STATE: RefCell<Parameters> = RefCell::default();
 }
 
 #[wasm_bindgen()]
@@ -77,7 +77,7 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
 
 #[wasm_bindgen(js_name = initState)]
 pub fn init_state(state: &JsValue) {
-    let state_parsed: State = state.into_serde().unwrap();
+    let state_parsed: Parameters = state.into_serde().unwrap();
 
     STATE.with(|service| service.replace(state_parsed));
 }

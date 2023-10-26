@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use warp_erc1155::{
     action::{ActionResult, BalanceOf, HandlerResult, ReadResponse},
     error::ContractError,
-    state::State,
+    state::Parameters,
 };
 
 use crate::actions::{Actionable, AsyncActionable};
@@ -11,7 +11,7 @@ use crate::state::{Balance, KvState};
 
 #[async_trait(?Send)]
 impl AsyncActionable for BalanceOf {
-    async fn action(self, _caller: String, state: State) -> ActionResult {
+    async fn action(self, _caller: String, state: Parameters) -> ActionResult {
         let token_id = self
             .token_id
             .unwrap_or(KvState::settings().default_token().get().await);

@@ -5,7 +5,7 @@ use warp_erc1155::action::HandlerResult;
 use warp_erc1155::action::IsApprovedForAll;
 use warp_erc1155::action::ReadResponse;
 use warp_erc1155::action::SetApprovalForAll;
-use warp_erc1155::state::State;
+use warp_erc1155::state::Parameters;
 
 use crate::{actions::AsyncActionable, state::KvState};
 
@@ -19,7 +19,7 @@ use crate::{actions::AsyncActionable, state::KvState};
 
 #[async_trait(?Send)]
 impl AsyncActionable for IsApprovedForAll {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
         // let approved = is_approved_for_all_internal(&state, &self.operator, &self.owner);
         let approved = !KvState::approvals(&self.owner)
             .peek()
@@ -40,7 +40,7 @@ impl AsyncActionable for IsApprovedForAll {
 
 #[async_trait(?Send)]
 impl AsyncActionable for SetApprovalForAll {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
         KvState::approvals(&caller)
             .init_default()
             .await

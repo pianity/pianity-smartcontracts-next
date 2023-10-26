@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use warp_erc1155::{
     action::{Action, ActionResult, Batch, HandlerResult, ReadResponse},
     error::ContractError,
-    state::State,
+    state::Parameters,
 };
 
 use crate::contract::handle;
@@ -11,7 +11,7 @@ use super::AsyncActionable;
 
 #[async_trait(?Send)]
 impl AsyncActionable for Batch {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
         let mut results: Vec<ReadResponse> = Vec::new();
 
         let mut read_mode = false;

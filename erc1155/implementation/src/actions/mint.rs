@@ -4,7 +4,7 @@ use wasm_bindgen::JsValue;
 use warp_erc1155::{
     action::{ActionResult, HandlerResult, Mint},
     error::ContractError,
-    state::State,
+    state::Parameters,
 };
 
 use crate::{
@@ -22,12 +22,12 @@ fn get_token_id(prefix: Option<String>, base_id: Option<String>) -> String {
 
 #[async_trait(?Send)]
 impl AsyncActionable for Mint {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
         if self.qty.value == 0 {
             return Err(ContractError::TransferAmountMustBeHigherThanZero);
         }
 
-        if !(is_op(&state, &caller)) {
+        if !is_op(&caller).await {
             return Err(ContractError::UnauthorizedAddress(caller));
         }
 
@@ -50,7 +50,7 @@ impl AsyncActionable for Mint {
         // .await;
 
         let default_token = KvState::settings().default_token().get().await;
-        let ticker_nonce = KvState::settings().ticker_nonce().get().await;
+        let ticker_nonce = KvState::ticker_nonce().get().await;
 
         KvState::tokens(&token_id)
             .init(Token {
@@ -68,10 +68,7 @@ impl AsyncActionable for Mint {
             })
             .await;
 
-        KvState::settings()
-            .ticker_nonce()
-            .map(|nonce| nonce + 1)
-            .await;
+        KvState::ticker_nonce().map(|nonce| nonce + 1).await;
 
         // state
         //     .tokens

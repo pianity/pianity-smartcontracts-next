@@ -144,7 +144,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kv_macro"
+name = "kv-macro"
 version = "0.1.0"
 dependencies = [
  "darling",
@@ -154,13 +154,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "kv_storage"
+name = "kv-storage"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "kv_macro",
+ "kv-macro",
  "serde",
- "serde_json",
  "tokio-test",
 ]
 
@@ -376,7 +375,8 @@ checksum = "c4f5b37a154999a8f3f98cc23a628d850e154479cd94decf3414696e12e31aaf"
 name = "warp-erc1155"
 version = "0.1.0"
 dependencies = [
- "kv_storage",
+ "async-trait",
+ "kv-storage",
  "schemars",
  "serde",
  "serde_json",
@@ -390,7 +390,7 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "js-sys",
- "kv_storage",
+ "kv-storage",
  "serde",
  "serde-wasm-bindgen",
  "tokio-test",

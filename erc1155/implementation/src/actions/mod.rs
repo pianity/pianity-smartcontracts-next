@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use warp_erc1155::{action::ActionResult, state::State};
+use warp_erc1155::{action::ActionResult, state::Parameters};
 
 pub mod approval;
 pub mod balance;
@@ -20,10 +20,10 @@ pub use mint::*;
 pub use transfer::*;
 
 pub trait Actionable {
-    fn action(self, caller: String, state: State) -> ActionResult;
+    fn action(self, caller: String, state: Parameters) -> ActionResult;
 }
 
 #[async_trait(?Send)]
 pub trait AsyncActionable {
-    async fn action(self, caller: String, state: State) -> ActionResult;
+    async fn action(self, caller: String, state: Parameters) -> ActionResult;
 }

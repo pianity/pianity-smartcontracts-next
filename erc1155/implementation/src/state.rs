@@ -1,8 +1,7 @@
-use crate::contract_utils::js_imports::Kv;
-use kv_storage::{kv, KvStorage};
-// use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::contract_utils::js_imports::{log, Kv};
+use kv_storage::{kv, KvStorage};
 
 mod string {
     use std::fmt::Display;
@@ -34,6 +33,7 @@ pub type BalancePrecision = u64;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
 pub struct Balance {
+    #[serde(with = "string")]
     pub value: BalancePrecision,
 }
 
@@ -50,7 +50,7 @@ impl Balance {
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Approvals {
     #[kv(map)]
-    approves: bool,
+    pub approves: bool,
 }
 
 #[kv(impl = "Kv", subpath)]
@@ -69,8 +69,6 @@ pub struct Token {
 // #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Settings {
     pub default_token: String,
-    pub ticker_nonce: u32,
-    pub test: Vec<u32>,
 
     pub paused: bool,
     pub can_evolve: bool,
@@ -83,20 +81,14 @@ pub struct Settings {
     pub allow_free_transfer: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Info {
-    pub name: String,
-    pub default_token: String,
-    pub ticker_nonce: u32,
-}
-
 #[kv(impl = "Kv")]
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct KvState {
+    pub ticker_nonce: u32,
     #[kv(map, subpath)]
-    tokens: Token,
+    pub tokens: Token,
     #[kv(map, subpath)]
-    approvals: Approvals,
+    pub approvals: Approvals,
     #[kv(subpath)]
-    settings: Settings,
+    pub settings: Settings,
 }

@@ -120,15 +120,42 @@ impl KvStorage for Kv {
         //     .await
         //     .unwrap();
 
-        KvJs::put(key, serde_wasm_bindgen::to_value(value).unwrap())
-            .await
-            .unwrap();
+        let value = serde_wasm_bindgen::to_value(value).unwrap();
+
+        log(&format!("KV: put: \"{}\" -> \"{:?}\"", key, value));
+
+        KvJs::put(key, value).await.unwrap();
     }
 
     async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
         // KvJs::get(key).await.unwrap().into_serde().unwrap()
 
-        serde_wasm_bindgen::from_value(KvJs::get(key).await.unwrap()).unwrap()
+        let value = KvJs::get(key).await;
+
+        log(&format!("KV: get \"{}\" -> \"{:?}\"", key, value));
+
+        let value = value.unwrap();
+
+        log(&format!(
+            "KV UNWRAPPED 1: get \"{}\" -> \"{:?}\"",
+            key, value
+        ));
+
+        let value = serde_wasm_bindgen::from_value::<Option<T>>(value);
+
+        if value.is_err() {
+            log(&format!(
+                "KV UNWRAPPED 2: get \"{}\" -> ERROR \"{:?}\"",
+                key,
+                value.as_ref().err()
+            ));
+        }
+
+        log(&format!("KV UNWRAPPED 2: get \"{}\"", key));
+
+        value.unwrap()
+
+        // serde_wasm_bindgen::from_value(KvJs::get(key).await.unwrap()).unwrap()
     }
 
     // async fn del(key: &str) {

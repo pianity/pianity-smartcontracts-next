@@ -45,20 +45,26 @@ impl Balance {
 }
 
 pub type Balances = HashMap<String, Balance>;
-pub type Approvals = HashMap<String, bool>;
+
+#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Approvals {
+    pub approves: HashMap<String, bool>,
+}
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Token {
     pub ticker: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tx_id: Option<String>,
-    pub balances: Balances,
+    pub balances: HashMap<String, Balance>,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    pub default_token: String,
+
     pub paused: bool,
     pub can_evolve: bool,
 
@@ -72,16 +78,20 @@ pub struct Settings {
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Info {
-    pub name: String,
-    pub default_token: String,
+pub struct InitialState {
     pub ticker_nonce: u32,
+    pub tokens: HashMap<String, Token>,
+    pub approvals: HashMap<String, Approvals>,
+    pub settings: Settings,
 }
 
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct State {
+pub struct Parameters {
     pub name: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initial_state: Option<InitialState>,
 
     // pub settings: Settings,
 

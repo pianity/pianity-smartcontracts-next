@@ -1,16 +1,17 @@
+use async_trait::async_trait;
+
 use warp_erc1155::action::{ActionResult, Evolve, HandlerResult};
 use warp_erc1155::error::ContractError;
-use warp_erc1155::state::State;
+use warp_erc1155::state::Parameters;
 
-use crate::utils::is_super_op;
+use crate::{actions::AsyncActionable, utils::is_super_op};
 
-use super::Actionable;
-
-impl Actionable for Evolve {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
+#[async_trait(?Send)]
+impl AsyncActionable for Evolve {
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
         if !state.can_evolve {
             Err(ContractError::EvolveNotAllowed)
-        } else if !is_super_op(&state, &caller) {
+        } else if !is_super_op(&caller).await {
             Err(ContractError::OnlyOwnerCanEvolve)
         } else {
             state.evolve = Option::from(self.value);

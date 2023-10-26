@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use warp_erc1155::action::{ActionResult, Configure, HandlerResult};
 use warp_erc1155::error::ContractError;
-use warp_erc1155::state::State;
+use warp_erc1155::state::Parameters;
 
 use crate::state::KvState;
 use crate::{
@@ -12,9 +12,9 @@ use crate::{
 
 #[async_trait(?Send)]
 impl AsyncActionable for Configure {
-    async fn action(self, caller: String, mut state: State) -> ActionResult {
-        let is_super_op = is_super_op(&state, &caller);
-        let is_op = is_op(&state, &caller);
+    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
+        let is_super_op = is_super_op(&caller).await;
+        let is_op = is_op(&caller).await;
 
         if !is_op
             || (self.super_operators.is_some() && !is_super_op)

@@ -81,7 +81,7 @@ impl From<Vec<Attribute>> for FieldArgs {
             if attr.path.is_ident("kv") {
                 let parsed_args = attr.parse_args().unwrap();
                 output.push(parsed_args);
-            } else {
+            } else if !attr.path.is_ident("doc") {
                 if let Some(ident) = attr.path.get_ident() {
                     panic!("Invalid attribute: {}", ident.to_string());
                 } else {
@@ -320,7 +320,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
 
                     let exists_steps = if !field_args.subpath {
                         quote! {
-                            #kv_struct::get::<u8>(&self.0).await.is_some()
+                            #kv_struct::get::<#field_type>(&self.0).await.is_some()
                         }
                     } else {
                         quote! {
