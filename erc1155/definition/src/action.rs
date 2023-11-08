@@ -2,7 +2,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ContractError;
-use crate::state::{Balance, BalancePrecision, Parameters};
+use crate::state::{Balance, BalancePrecision, Parameters, Settings, Token};
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Initialize;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -10,6 +14,16 @@ pub struct BalanceOf {
     pub token_id: Option<String>,
     pub target: String,
 }
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct GetToken {
+    pub token_id: Option<String>,
+}
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadSettings;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -76,7 +90,10 @@ pub struct Evolve {
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
+    Initialize(Initialize),
     BalanceOf(BalanceOf),
+    GetToken(GetToken),
+    ReadSettings(ReadSettings),
     Transfer(Transfer),
     Configure(Configure),
     SetApprovalForAll(SetApprovalForAll),
@@ -90,12 +107,16 @@ pub enum Action {
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum ReadResponse {
-    Balance {
-        balance: BalancePrecision,
+    BalanceOf {
+        balance: Balance,
         target: String,
     },
 
-    ApprovedForAll {
+    GetToken(Token),
+
+    ReadSettings(Settings),
+
+    IsApprovedForAll {
         approved: bool,
         owner: String,
         operator: String,

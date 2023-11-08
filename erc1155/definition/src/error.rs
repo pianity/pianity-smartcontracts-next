@@ -23,4 +23,6 @@ pub enum ContractError {
     TokenAlreadyExists,
 
     ContractIsPaused,
+    ContractUninitialized,
+    ContractAlreadyInitialized,
 }

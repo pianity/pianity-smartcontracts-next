@@ -8,7 +8,7 @@ use crate::{actions::AsyncActionable, utils::is_op};
 
 #[async_trait(?Send)]
 impl AsyncActionable for Burn {
-    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
+    async fn action(self, caller: String, state: Parameters) -> ActionResult {
         if !is_op(&caller).await {
             return Err(ContractError::UnauthorizedAddress(caller));
         }
@@ -43,6 +43,6 @@ impl AsyncActionable for Burn {
                 .await;
         }
 
-        Ok(HandlerResult::Write(state))
+        Ok(HandlerResult::None(state))
     }
 }

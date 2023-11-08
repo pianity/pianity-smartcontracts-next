@@ -29,7 +29,7 @@ impl AsyncActionable for IsApprovedForAll {
 
         Ok(HandlerResult::Read(
             state,
-            ReadResponse::ApprovedForAll {
+            ReadResponse::IsApprovedForAll {
                 approved,
                 owner: self.owner,
                 operator: self.operator,

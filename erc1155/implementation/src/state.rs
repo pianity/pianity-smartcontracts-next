@@ -43,9 +43,6 @@ impl Balance {
     }
 }
 
-// pub type Balances = HashMap<String, Balance>;
-// pub type Approvals = HashMap<String, bool>;
-
 #[kv(impl = "Kv", subpath)]
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Approvals {
@@ -62,11 +59,7 @@ pub struct Token {
     pub balances: Balance,
 }
 
-// #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-// #[serde(rename_all = "camelCase")]
-
 #[kv(impl = "Kv", subpath)]
-// #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Settings {
     pub default_token: String,
 

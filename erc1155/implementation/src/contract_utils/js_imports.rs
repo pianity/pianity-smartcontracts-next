@@ -84,21 +84,6 @@ extern "C" {
     pub fn randomInt(max_value: i32) -> i32;
 }
 
-// #[wasm_bindgen]
-// extern "C" {
-//     #[wasm_bindgen]
-//     pub type KvJs;
-//
-//     #[wasm_bindgen(static_method_of = KvJs)]
-//     pub async fn put(key: &str, value: JsValue);
-//
-//     #[wasm_bindgen(static_method_of = KvJs)]
-//     pub async fn get(key: &str) -> JsValue;
-//
-//     #[wasm_bindgen(static_method_of = KvJs)]
-//     pub async fn del(key: &str);
-// }
-
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen]
@@ -109,6 +94,14 @@ extern "C" {
 
     #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvPut)]
     pub async fn put(key: &str, value: JsValue) -> Result<(), JsValue>;
+
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvMap)]
+    pub async fn map(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Result<JsValue, JsValue>;
 }
 
 pub struct Kv;
@@ -116,51 +109,26 @@ pub struct Kv;
 #[async_trait(?Send)]
 impl KvStorage for Kv {
     async fn put<T: Serialize>(key: &str, value: &T) {
-        // KvJs::put(key, JsValue::from_serde(value).unwrap())
-        //     .await
-        //     .unwrap();
-
-        let value = serde_wasm_bindgen::to_value(value).unwrap();
-
-        log(&format!("KV: put: \"{}\" -> \"{:?}\"", key, value));
+        let serializer = serde_wasm_bindgen::Serializer::json_compatible();
+        let value = value.serialize(&serializer).unwrap();
 
         KvJs::put(key, value).await.unwrap();
     }
 
     async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
-        // KvJs::get(key).await.unwrap().into_serde().unwrap()
+        let value = KvJs::get(key).await.unwrap();
 
-        let value = KvJs::get(key).await;
-
-        log(&format!("KV: get \"{}\" -> \"{:?}\"", key, value));
-
-        let value = value.unwrap();
-
-        log(&format!(
-            "KV UNWRAPPED 1: get \"{}\" -> \"{:?}\"",
-            key, value
-        ));
-
-        let value = serde_wasm_bindgen::from_value::<Option<T>>(value);
-
-        if value.is_err() {
-            log(&format!(
-                "KV UNWRAPPED 2: get \"{}\" -> ERROR \"{:?}\"",
-                key,
-                value.as_ref().err()
-            ));
-        }
-
-        log(&format!("KV UNWRAPPED 2: get \"{}\"", key));
-
-        value.unwrap()
-
-        // serde_wasm_bindgen::from_value(KvJs::get(key).await.unwrap()).unwrap()
+        serde_wasm_bindgen::from_value(value).unwrap()
     }
 
-    // async fn del(key: &str) {
-    //     KvJs::del(key).await;
-    // }
+    async fn map<T: DeserializeOwned>(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Vec<(String, T)> {
+        serde_wasm_bindgen::from_value(KvJs::map(gte, lt, reverse, limit).await.unwrap()).unwrap()
+    }
 }
 
 #[wasm_bindgen]
