@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub use kv_macro::kv_storage as kv;
 
@@ -7,29 +7,13 @@ pub use kv_macro::kv_storage as kv;
 pub trait KvStorage {
     async fn put<T: Serialize>(key: &str, value: &T);
     async fn get<T: DeserializeOwned>(key: &str) -> Option<T>;
-    // async fn del(key: &str);
+    async fn map<T: DeserializeOwned>(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Vec<(String, T)>;
 }
-
-// #[async_trait(?Send)]
-// pub trait StorageItem<T: KvStorage + Sized> {
-//     type Value<'b>: for<'a> Deserialize<'a> + Serialize + 'b;
-//
-//     async fn set_value<'b>(&self, value: Self::Value<'b>) {
-//         T::put::<Self::Value<'b>>(&self.key(), &value).await;
-//     }
-//
-//     async fn value<'b>(&self) -> Self::Value<'b> {
-//         T::get(&self.key()).await
-//     }
-//
-//     async fn update<'b, F: FnOnce(&mut Self::Value<'b>)>(&self, update_fn: F) {
-//         let mut value = self.value().await;
-//         update_fn(&mut value);
-//         self.set_value(value).await;
-//     }
-//
-//     fn key(&self) -> &'static str;
-// }
 
 #[cfg(test)]
 mod tests {
@@ -45,14 +29,11 @@ mod tests {
     #[async_trait(?Send)]
     impl KvStorage for Kv {
         async fn put<T: Serialize>(key: &str, value: &T) {
-            println!(
-                "{}",
-                &format!("put: {} = {:?}", key, serde_json::to_string(value).unwrap())
-            );
+            println!("put: {} = {:?}", key, serde_json::to_string(value).unwrap());
         }
 
         async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
-            println!("{}", &format!("get: {}", key));
+            println!("get: {}", key);
 
             match key {
                 ".the_name" => Some(serde_json::from_str("\"hello\"").unwrap()),
@@ -68,9 +49,16 @@ mod tests {
             // serde_json::from_str("\"bonjour\"").unwrap()
         }
 
-        // async fn del(key: &str) {
-        //     println!("{}", &format!("del: {}", key));
-        // }
+        async fn map<T: DeserializeOwned>(
+            gte: Option<&str>,
+            lt: Option<&str>,
+            reverse: Option<bool>,
+            limit: Option<u32>,
+        ) -> Vec<(String, T)> {
+            println!("map: {:?}, {:?}, {:?}, {:?}", gte, lt, reverse, limit);
+
+            Vec::new()
+        }
     }
 
     #[kv(impl = "Kv")]
@@ -107,15 +95,6 @@ mod tests {
         let test2 = test.ok_or("err")?.ok_or("err")?.ok_or("err")?;
 
         Ok(())
-
-        // let string = "hello_world";
-        // let splited = string
-        //     .split('_')
-        //     .map(capitalize)
-        //     .collect::<Vec<_>>()
-        //     .join("");
-        // Some(1).map(|x| x + 1);
-        // // String::default().split_at_mut;
     }
 
     fn overwrite() {
@@ -124,9 +103,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_macro() {
-        // State::default().init().await;
-        let init_state = State {
-            // name: Some("hello".to_string()),
+        State {
             the_name: None,
             settings: Settings {
                 paused: false,
@@ -160,7 +137,14 @@ mod tests {
 
         println!("-------------");
 
-        println!("thename: {:?}", State::the_name().get().await);
+        println!(
+            "thename: {:?}",
+            State::tokens("PTY")
+                .init_default()
+                .await
+                .list_balances()
+                .await
+        );
 
         // let bobsBalance = State::tokens("PTY")
         //     .init_default()

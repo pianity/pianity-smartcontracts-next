@@ -341,7 +341,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
 
                     let init_default_steps = if !field_args.subpath {
                         quote! {
-                            #kv_struct::put::<#field_type>(&self.0, &#field_type::default()).await;
+                            #kv_struct::put::<#field_type>(&self.0, &<#field_type>::default()).await;
                         }
                     } else {
                         quote! {
@@ -410,12 +410,6 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                                 #return_type(self.0.clone())
                             }
 
-                            // pub async fn overwrite(&self, value: &#field_type) -> #return_type {
-                            //     #init_steps
-                            //
-                            //     #return_type(self.0.clone())
-                            // }
-
                             pub async fn init_default(&self) -> #return_type {
                                 if !self.exists().await {
                                     #init_default_steps
@@ -441,9 +435,53 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     field_maybe_struct_name
                 };
 
+                let field = gen_field_name(field_name, &field_args, &macro_args, return_type);
+                let field_list = if field_args.map && !field_args.subpath {
+                    let fn_name = format_ident!("list_{}", field_name);
+                    let fn_args = if macro_args.subpath {
+                        quote!(&self)
+                    } else {
+                        quote!()
+                    };
+
+                    let (gte, lt) = if macro_args.subpath {
+                        let quoted_field_name = format!("{}", field_name);
+                        let gte = quote!(Some(&format!("{}.{}", self.0, #quoted_field_name)));
+                        let lt = quote!(Some(&format!("{}.{}\x7f", self.0, #quoted_field_name)));
+
+                        (gte, lt)
+                    } else {
+                        let gte = format!("{}.", field_name);
+                        let lt = format!("{}.\x7f", field_name);
+
+                        (quote!(Some(#gte)), quote!(Some(#lt)))
+                    };
+
+                    quote! {
+                        pub async fn #fn_name(#fn_args) -> Vec<(String, #field_type)> {
+                            let items = #kv_struct::map::<#field_type>(
+                                #gte,
+                                #lt,
+                                None,
+                                None
+                            ).await;
+
+                            items
+                                .into_iter()
+                                .map(|(path, value)| {
+                                    let name = path.split_at(path.rfind('.').unwrap() + 1).1;
+                                    (name.to_string(), value)
+                                })
+                                .collect::<Vec<_>>()
+                        }
+                    }
+                } else {
+                    quote!()
+                };
+
                 (
                     // Field for main Storage struct
-                    gen_field_name(field_name, &field_args, &macro_args, return_type),
+                    quote! { #field #field_list },
                     // Implementation of StorageItem or StorageMap
                     if field_args.subpath {
                         quote! {
@@ -457,10 +495,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
 
                             impl #field_struct_name {
                                 pub async fn get(&self) -> #field_type {
-                                    println!("HELLO WORLD");
-                                    let stuff = #kv_struct::get(&self.0).await.unwrap();
-                                    println!("after");
-                                    stuff
+                                    #kv_struct::get(&self.0).await.unwrap()
                                 }
 
                                 pub async fn set(&self, value: &#field_type) {
