@@ -7,6 +7,7 @@ import {
     Contract,
     ContractError,
     InteractionResult,
+    InteractionResultType,
     Tag,
     WARP_TAGS,
     Warp,
@@ -26,8 +27,9 @@ import { Parameters as ScarcityState } from "scarcity/State";
 //
 // export const UNIT = 1_000_000;
 
-// export function expectOk(result: WriteInteractionResponse | null) {
-//     result.
+// export function expectOk(
+//     result: SafeWriteInteractionResponse<unknown>,
+// ): asserts result is InteractionSuccess {
 //     if (result?.type !== "ok") {
 //         console.log("interaction is error:", JSON.stringify(result, undefined, 2));
 //     }
@@ -35,26 +37,30 @@ import { Parameters as ScarcityState } from "scarcity/State";
 //     expect(result?.type).toEqual("ok");
 // }
 
-export async function expectError<ERROR>(promise: Promise<unknown>, expectedError?: ERROR) {
-    try {
-        await promise;
-        throw new Error("Promise didn't throw");
-    } catch (error) {
-        expect(error).toBeInstanceOf(ContractError);
-        if (error instanceof ContractError) {
-            expect(error.error).toEqual(expectedError);
-        }
+export function expectOk(result: {
+    type: InteractionResultType;
+}): asserts result is { type: "ok" } {
+    expect(result?.type, `interaction isn't ok: ${JSON.stringify(result, undefined, 2)}`).toEqual(
+        "ok",
+    );
+}
+
+export function expectError<ERROR, const NARROWED_ERROR extends ERROR | undefined = undefined>(
+    result: { type: InteractionResultType; error?: ERROR },
+    expectedError?: NARROWED_ERROR,
+): asserts result is { type: "error"; error: NARROWED_ERROR } {
+    if (result?.type !== "error") {
+        console.log("interaction is ok:", JSON.stringify(result, undefined, 2));
     }
 
-    // if (result?.type !== "error") {
-    //     console.log("interaction is ok:", JSON.stringify(result, undefined, 2));
-    // }
-    //
-    // expect(result?.type).toEqual("error");
-    //
-    // if (expectedError) {
-    //     expect((result as WriteInteractionResponseFailure<ERROR>).error).toEqual(expectedError);
-    // }
+    expect(
+        result?.type,
+        `interaction isn't error: ${JSON.stringify(result, undefined, 2)}`,
+    ).toEqual("error");
+
+    if (expectedError) {
+        expect((result as InteractionFailure<ERROR>).error).toEqual(expectedError);
+    }
 }
 
 type ContractName = "erc1155" | "scarcity" | "shuffle" | "lock";
@@ -224,17 +230,21 @@ export async function deployContract<T extends ContractName>(
     return deployment;
 }
 
-export type Interactor<ACTION> = (
+export type InteractionSuccess = { type: "ok" } & WriteInteractionResponse;
+export type InteractionFailure<T> = { type: "error"; error: T };
+export type SafeWriteInteractionResponse<T> = InteractionSuccess | InteractionFailure<T>;
+
+export type Interactor<ACTION, ERROR> = (
     interaction: ACTION,
     options?: { wallet?: JWKInterface } & WriteInteractionOptions,
-) => Promise<WriteInteractionResponse | null>;
+) => Promise<SafeWriteInteractionResponse<ERROR>>;
 
-export function createInteractor<ACTION>(
+export function createInteractor<ACTION, ERROR>(
     warp: Warp,
     contract: Contract<unknown>,
     defaultWallet: JWKInterface,
     defaultOptions: WriteInteractionOptions = {},
-): Interactor<ACTION> {
+): Interactor<ACTION, ERROR> {
     defaultOptions = { strict: true, ...defaultOptions };
 
     return async (
@@ -248,15 +258,22 @@ export function createInteractor<ACTION>(
         }
 
         const now = Date.now();
-        const interactionResult = await contract.writeInteraction(interaction, {
-            ...defaultOptions,
-            ...options,
-        });
-        console.log("interaction took", Date.now() - now, "ms");
+        try {
+            const interactionResult = await contract.writeInteraction(interaction, {
+                ...defaultOptions,
+                ...options,
+            });
+            console.log("interaction took", Date.now() - now, "ms");
+            await warp.testing.mineBlock();
 
-        await warp.testing.mineBlock();
-
-        return interactionResult;
+            return { type: "ok", ...interactionResult! };
+        } catch (error) {
+            if (error instanceof ContractError) {
+                return { type: "error", error: error.error };
+            } else {
+                throw error;
+            }
+        }
     };
 }
 
@@ -264,9 +281,11 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
     ? I
     : never;
 
-export type Viewer<Action, Result, State> = ReturnType<typeof createViewer<Action, Result, State>>;
+export type Viewer<Action, Result, State, Error> = ReturnType<
+    typeof createViewer<Action, Result, State, Error>
+>;
 
-export function createViewer<Action, Result, State>(contract: Contract<State>) {
+export function createViewer2<Action, Result, State>(contract: Contract<State>) {
     type Results = UnionToIntersection<Result>;
     type FunctionsWithResults = keyof Results;
 
@@ -275,6 +294,41 @@ export function createViewer<Action, Result, State>(contract: Contract<State>) {
         // ): Promise<InteractionResult<State, Results[T["function"]]>> {
     ): Promise<InteractionResult<State, Pick<Results, T["function"]>>> {
         return contract.viewState(action);
+    };
+}
+
+export function createViewer<Action, Result, State, Error>(contract: Contract<State>) {
+    type Results = UnionToIntersection<Result>;
+    type FunctionsWithResults = keyof Results;
+
+    // type CorrectInteractionResult<T extends Action & { function: FunctionsWithResults }> =
+    //     InteractionResult<State, Pick<Results, T["function"]>>;
+    // type ViewResult<T extends Action & { function: FunctionsWithResults }> =
+    //     | { type: "ok"; result: CorrectInteractionResult<T>["result"] }
+    //     | { type: "error"; error: Error };
+
+    // return async function view<const T extends Action & { function: FunctionsWithResults }>(
+    //     action: T,
+    // ): Promise<ViewResult<T>> {
+    return async function view<T extends Action & { function: FunctionsWithResults }>(
+        action: T,
+    ): Promise<
+        | {
+              type: "ok";
+              result: InteractionResult<
+                  State,
+                  Pick<Results, T["function"]>
+              >["result"][T["function"]];
+          }
+        | { type: "error"; error: Error }
+    > {
+        const view = await contract.viewState(action);
+
+        if (view.type === "ok") {
+            return { type: "ok", result: (view.result as any)[action.function] };
+        } else {
+            return { type: "error", error: view.error as any };
+        }
     };
 }
 
