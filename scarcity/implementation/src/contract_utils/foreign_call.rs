@@ -8,6 +8,8 @@ use warp_scarcity::error::{ForeignReadError, ForeignWriteError};
 
 use crate::contract_utils::js_imports::SmartWeave;
 
+use super::js_imports::log;
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ForeignContractState {
@@ -74,8 +76,11 @@ impl ForeignContractCaller {
 
         let result = SmartWeave::write(contract_address, input)
             .await
-            .into_serde::<ForeignCallResult<ERROR>>()
-            .map_err(|_err| ForeignWriteError::ParseError)?;
+            .into_serde::<ForeignCallResult<ERROR>>();
+
+        log(&format!("result: {:?}", result));
+
+        let result = result.map_err(|_err| ForeignWriteError::ParseError)?;
 
         match result {
             ForeignCallResult::Ok(state) => {

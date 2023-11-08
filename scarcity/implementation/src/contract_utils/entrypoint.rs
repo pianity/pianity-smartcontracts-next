@@ -4,10 +4,12 @@
 
 use std::cell::RefCell;
 
+use serde::Serialize;
+
 use wasm_bindgen::prelude::*;
 
 use warp_scarcity::{
-    action::{Action, HandlerResult},
+    action::{Action, HandlerResult, ReadResponse},
     error::ContractError,
     state::Parameters,
 };
@@ -49,16 +51,16 @@ thread_local! {
 
 #[wasm_bindgen()]
 pub async fn handle(interaction: JsValue) -> Option<JsValue> {
+    let serializer = serde_wasm_bindgen::Serializer::json_compatible();
+
     let action = serde_wasm_bindgen::from_value::<Action>(interaction);
-    // let action: Result<Action, Error> = interaction.into_serde();
 
     if action.is_err() {
         let error = Err::<HandlerResult, _>(ContractError::RuntimeError(
             "Error while parsing input".to_string(),
         ));
 
-        // return Some(JsValue::from_serde(&error).unwrap());
-        return Some(serde_wasm_bindgen::to_value(&error).unwrap());
+        return Some(error.serialize(&serializer).unwrap());
     }
 
     let state = STATE.with(|service| service.borrow().clone());
@@ -70,9 +72,13 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
             STATE.with(|service| service.replace(state));
             None
         }
-        Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
+        Ok(HandlerResult::Read(_, response)) => Some(
+            Ok::<ReadResponse, ContractError>(response)
+                .serialize(&serializer)
+                .unwrap(),
+        ),
         Ok(HandlerResult::None(_)) => None,
-        error @ Err(_) => Some(JsValue::from_serde(&error).unwrap()),
+        error @ Err(_) => Some(error.serialize(&serializer).unwrap()),
     }
 }
 

@@ -7,6 +7,8 @@ pub mod batch;
 pub mod configure;
 pub mod edit_attached_royalties;
 pub mod evolve;
+pub mod get_attached_royalties;
+pub mod initialize;
 pub mod mint_nft;
 pub mod transfer;
 
@@ -15,6 +17,8 @@ pub use batch::*;
 pub use configure::*;
 pub use edit_attached_royalties::*;
 pub use evolve::*;
+pub use get_attached_royalties::*;
+pub use initialize::*;
 pub use mint_nft::*;
 pub use transfer::*;
 

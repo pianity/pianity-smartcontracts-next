@@ -3,7 +3,17 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
-use crate::state::{Parameters, Royalties};
+use crate::state::{AttachedRoyalties, Parameters, Royalties};
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Initialize;
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetAttachedRoyalties {
+    pub base_id: String,
+}
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,6 +123,8 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
+    GetAttachedRoylaties(GetAttachedRoyalties),
+    Initialize(Initialize),
     EditAttachedRoyalties(EditAttachedRoyalties),
     AttachRoyalties(AttachRoyalties),
     MintNft(MintNft),
@@ -122,9 +134,10 @@ pub enum Action {
     Batch(Batch),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase", untagged)]
+#[derive(JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub enum ReadResponse {
+    GetAttachedRoylaties(AttachedRoyalties),
     Batch(Vec<ReadResponse>),
 }
 

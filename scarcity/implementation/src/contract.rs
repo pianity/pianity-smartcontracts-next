@@ -2,47 +2,19 @@ use std::collections::HashMap;
 
 use async_recursion::async_recursion;
 
+use serde::{Deserialize, Serialize};
 use warp_scarcity::{
     action::{Action, ActionResult, Configure},
     error::ContractError,
-    state::{InitialState, Parameters},
+    state::Parameters,
 };
 
 use crate::{
-    actions::{self, Actionable, AsyncActionable},
-    contract_utils::{
-        foreign_call::ForeignContractCaller,
-        js_imports::{log, Block, Contract, SmartWeave, Transaction},
-    },
-    state::{AttachedRoyalties, Settings, State},
+    actions::AsyncActionable,
+    contract_utils::{foreign_call::ForeignContractCaller, js_imports::SmartWeave},
+    state::State,
     utils::{is_op, is_super_op},
 };
-
-pub async fn init(init_state: &InitialState) {
-    let init_state = State {
-        settings: Settings {
-            paused: init_state.settings.paused,
-            super_operators: init_state.settings.super_operators.clone(),
-            operators: init_state.settings.operators.clone(),
-            erc1155: init_state.settings.erc1155.clone(),
-            custodian: init_state.settings.custodian.clone(),
-        },
-        all_attached_royalties: HashMap::from_iter(init_state.attached_royalties.iter().map(
-            |(id, ar)| {
-                (
-                    id.clone(),
-                    AttachedRoyalties {
-                        base_id: ar.base_id.clone(),
-                        royalties: ar.royalties.clone(),
-                        rate: ar.rate,
-                    },
-                )
-            },
-        )),
-    };
-
-    State::init(&init_state).await
-}
 
 #[async_recursion(?Send)]
 pub async fn handle(
@@ -50,11 +22,15 @@ pub async fn handle(
     action: Action,
     foreign_caller: &mut ForeignContractCaller,
 ) -> ActionResult {
-    if let Some(init_state) = state.initial_state.as_ref() {
-        init(init_state).await;
-    }
-
     let direct_caller = SmartWeave::caller();
+
+    if let Action::Initialize(initialize) = action {
+        return initialize
+            .action(direct_caller, state, foreign_caller)
+            .await;
+    } else if state.initial_state.is_some() {
+        return Err(ContractError::ContractUninitialized);
+    }
 
     // if state.settings.paused
     //     && std::mem::discriminant(&action)
@@ -76,6 +52,10 @@ pub async fn handle(
     }
 
     match action {
+        Action::Initialize(_) => Err(ContractError::ContractAlreadyInitialized),
+        Action::GetAttachedRoylaties(action) => {
+            action.action(direct_caller, state, foreign_caller).await
+        }
         Action::AttachRoyalties(action) => {
             action.action(direct_caller, state, foreign_caller).await
         }

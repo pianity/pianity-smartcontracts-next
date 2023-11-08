@@ -5,7 +5,7 @@ mod tests {
 
     use schemars::JsonSchema;
 
-    use crate::action::Action;
+    use crate::action::{Action, ReadResponse};
     use crate::error::ContractError;
     use crate::state::Parameters;
 
@@ -36,6 +36,7 @@ mod tests {
         generate::<Parameters>("State")?;
         generate::<Action>("Action")?;
         generate::<ContractError>("ContractError")?;
+        generate::<ReadResponse>("ReadResponse")?;
 
         Ok(())
     }

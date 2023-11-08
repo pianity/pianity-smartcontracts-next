@@ -15,6 +15,7 @@ pub const UNIT: u32 = 1_000_000;
  */
 pub type Royalties = HashMap<String, u32>;
 
+#[derive(Debug)]
 #[kv(impl = "Kv")]
 pub struct AttachedRoyalties {
     pub base_id: String,

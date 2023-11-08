@@ -54,4 +54,6 @@ pub enum ContractError {
     QtyMustBeOneForNftTransfers,
 
     ContractIsPaused,
+    ContractUninitialized,
+    ContractAlreadyInitialized,
 }
