@@ -436,6 +436,53 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                 };
 
                 let field = gen_field_name(field_name, &field_args, &macro_args, return_type);
+                let field_delete = if field_args.map {
+                    let fn_name = format_ident!("delete_{}", field_name);
+                    let fn_args = if macro_args.subpath {
+                        quote!(&self,)
+                    } else {
+                        quote!()
+                    };
+
+                    let path = if macro_args.subpath {
+                        let field_name_str = field_name.to_string();
+                        quote!(&format!("{}.{}.{}", self.0, #field_name_str, key))
+                    } else {
+                        let path = format!(".{}", field_name);
+
+                        quote!(&format!("{}.{}", #path, key))
+                    };
+
+                    let delete_steps = if !field_args.subpath {
+                        quote! {
+                            #kv_struct::del(#path).await
+                        }
+                    } else {
+                        let gte = quote!(Some(&format!("{}.", #path)));
+                        let lt = quote!(Some(&format!("{}.\x7f", #path)));
+
+                        quote! {
+                            let subkeys = #kv_struct::keys(
+                                #gte,
+                                #lt,
+                                None,
+                                None
+                            ).await;
+
+                            for subkey in subkeys.iter() {
+                                #kv_struct::del(&subkey).await;
+                            }
+                        }
+                    };
+
+                    quote! {
+                        pub async fn #fn_name(#fn_args key: &str) {
+                            #delete_steps
+                        }
+                    }
+                } else {
+                    quote!()
+                };
                 let field_list = if field_args.map && !field_args.subpath {
                     let fn_name = format_ident!("list_{}", field_name);
                     let fn_args = if macro_args.subpath {
@@ -478,10 +525,46 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                 } else {
                     quote!()
                 };
+                let field_count = if field_args.map {
+                    let fn_name = format_ident!("count_{}", field_name);
+                    let fn_args = if macro_args.subpath {
+                        quote!(&self)
+                    } else {
+                        quote!()
+                    };
+
+                    let (gte, lt) = if macro_args.subpath {
+                        let quoted_field_name = format!("{}", field_name);
+                        let gte = quote!(Some(&format!("{}.{}", self.0, #quoted_field_name)));
+                        let lt = quote!(Some(&format!("{}.{}\x7f", self.0, #quoted_field_name)));
+
+                        (gte, lt)
+                    } else {
+                        let gte = format!("{}.", field_name);
+                        let lt = format!("{}.\x7f", field_name);
+
+                        (quote!(Some(#gte)), quote!(Some(#lt)))
+                    };
+
+                    quote! {
+                        pub async fn #fn_name(#fn_args) -> usize {
+                            let subkeys = #kv_struct::keys(
+                                #gte,
+                                #lt,
+                                None,
+                                None
+                            ).await;
+
+                            subkeys.len()
+                        }
+                    }
+                } else {
+                    quote!()
+                };
 
                 (
                     // Field for main Storage struct
-                    quote! { #field #field_list },
+                    quote! { #field #field_delete #field_list #field_count },
                     // Implementation of StorageItem or StorageMap
                     if field_args.subpath {
                         quote! {
