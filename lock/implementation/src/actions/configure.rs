@@ -1,18 +1,29 @@
+use async_trait::async_trait;
 use warp_lock::{
     action::{ActionResult, Configure, HandlerResult},
     error::ContractError,
-    state::State,
+    state::Parameters,
 };
 
 use crate::{
     actions::Actionable,
+    contract_utils::foreign_call::ForeignContractCaller,
+    state::State,
     utils::{is_op, is_super_op},
 };
 
-impl Actionable for Configure {
-    fn action(self, caller: String, mut state: State) -> ActionResult {
-        let is_super_op = is_super_op(&state, &caller);
-        let is_op = is_op(&state, &caller);
+use super::AsyncActionable;
+
+#[async_trait(?Send)]
+impl AsyncActionable for Configure {
+    async fn action(
+        self,
+        caller: String,
+        mut state: Parameters,
+        foreign_caller: &mut ForeignContractCaller,
+    ) -> ActionResult {
+        let is_super_op = is_super_op(&caller).await;
+        let is_op = is_op(&caller).await;
 
         if !is_op
             || (self.super_operators.is_some() && !is_super_op)
@@ -23,25 +34,24 @@ impl Actionable for Configure {
         }
 
         if let Some(super_operators) = self.super_operators {
-            state.settings.super_operators = super_operators;
+            State::settings()
+                .super_operators()
+                .set(&super_operators)
+                .await;
         }
 
         if let Some(operators) = self.operators {
-            state.settings.operators = operators;
-        }
-
-        if let Some(can_evolve) = self.can_evolve {
-            state.settings.can_evolve = can_evolve;
+            State::settings().operators().set(&operators).await;
         }
 
         if let Some(paused) = self.paused {
-            state.settings.paused = paused;
+            State::settings().paused().set(&paused).await;
         }
 
         if let Some(erc1155) = self.erc1155 {
-            state.settings.erc1155 = erc1155;
+            State::settings().erc1155().set(&erc1155).await;
         }
 
-        return Ok(HandlerResult::Write(state));
+        return Ok(HandlerResult::None(state));
     }
 }

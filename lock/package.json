@@ -1,13 +1,13 @@
 {
     "name": "warp-lock",
     "version": "0.0.1",
-    "description": "Rust implementation of Pianity's SCARCITY contract",
+    "description": "Rust implementation of Pianity's LOCK contract",
     "main": "index.js",
     "author": "Eyal Chojnowski <eyal@pianity.com>",
     "license": "MIT",
     "scripts": {
-        "build": "wasm-pack build --target nodejs --release --out-name rust-contract implementation",
-        "dev": "wasm-pack build --target nodejs --dev --out-name rust-contract implementation",
+        "build": "wasm-pack build --target nodejs --debug --out-name rust-contract implementation",
+        "build-prod": "wasm-pack build --target nodejs --release --out-name rust-contract implementation",
         "gen-bindings": "yarn gen-json && yarn gen-ts",
         "gen-json": "GENERATE_JSON=1 cargo test generate_json -- --nocapture",
         "gen-ts": "ts-node --transpileOnly ./scripts/generate-ts.ts"

@@ -46,9 +46,13 @@ pub enum ContractError {
 
     TransferResult(String),
 
+    OwnerHasNoVault(String),
+
     Erc1155ReadFailed,
     Erc1155Error(ForeignWriteError<warp_erc1155::error::ContractError>),
     InvalidNftId(String),
 
     ContractIsPaused,
+    ContractUninitialized,
+    ContractAlreadyInitialized,
 }

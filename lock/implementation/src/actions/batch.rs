@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use warp_lock::{
     action::{Action, ActionResult, Batch, HandlerResult, ReadResponse},
     error::ContractError,
-    state::State,
+    state::Parameters,
 };
 
 use crate::{contract::handle, contract_utils::foreign_call::ForeignContractCaller};
@@ -13,14 +13,15 @@ use super::AsyncActionable;
 impl AsyncActionable for Batch {
     async fn action(
         self,
-        _caller: String,
-        mut state: State,
+        caller: String,
+        mut state: Parameters,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
         let mut results: Vec<ReadResponse> = Vec::new();
 
         let mut read_mode = false;
         let mut write_mode = false;
+        let mut none_mode = false;
 
         for action in self.actions {
             if let Action::Batch(_) = action {
@@ -47,6 +48,11 @@ impl AsyncActionable for Batch {
                     results.push(response);
                     state
                 }
+                HandlerResult::None(state) => {
+                    none_mode = true;
+
+                    state
+                }
             }
         }
 
@@ -54,6 +60,8 @@ impl AsyncActionable for Batch {
             Ok(HandlerResult::Read(state, ReadResponse::Batch(results)))
         } else if write_mode {
             Ok(HandlerResult::Write(state))
+        } else if none_mode {
+            Ok(HandlerResult::None(state))
         } else {
             Err(ContractError::EmptyBatch)
         }

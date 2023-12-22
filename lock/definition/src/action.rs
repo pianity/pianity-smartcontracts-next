@@ -3,15 +3,37 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
-use crate::state::State;
+use crate::state::{LockedBalance, Parameters};
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Initialize;
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct GetVault {
+    pub owner: String,
+}
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct GetAllVaults;
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ReleaseMethod {
+    Cliff,
+    Linear,
+}
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferLocked {
     pub token_id: String,
-    pub to: String,
+    pub target: String,
     pub qty: Balance,
     pub duration: u32,
+    pub method: ReleaseMethod,
 }
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
@@ -51,6 +73,9 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
+    Initialize(Initialize),
+    GetVault(GetVault),
+    GetAllVaults(GetAllVaults),
     TransferLocked(TransferLocked),
     Unlock(Unlock),
     Configure(Configure),
@@ -58,17 +83,20 @@ pub enum Action {
     Batch(Batch),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase", untagged)]
+#[derive(JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub enum ReadResponse {
     Batch(Vec<ReadResponse>),
+    GetVault((String, Vec<LockedBalance>)),
+    GetAllVaults(Vec<(String, Vec<LockedBalance>)>),
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum HandlerResult {
-    Write(State),
-    Read(State, ReadResponse),
+    Write(Parameters),
+    Read(Parameters, ReadResponse),
+    None(Parameters),
 }
 
 pub type ActionResult = Result<HandlerResult, ContractError>;

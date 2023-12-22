@@ -4,14 +4,19 @@
 
 use std::cell::RefCell;
 
-use serde_json::Error;
+use serde::Serialize;
+
 use wasm_bindgen::prelude::*;
+
+use warp_lock::{
+    action::{Action, HandlerResult, ReadResponse},
+    error::ContractError,
+    state::Parameters,
+};
 
 use crate::{contract, contract_utils::foreign_call::ForeignContractCaller};
 
-use warp_lock::action::{Action, HandlerResult};
-use warp_lock::error::ContractError;
-use warp_lock::state::State;
+use super::js_imports::log;
 
 /*
 Note: in order do optimize communication between host and the WASM module,
@@ -43,19 +48,21 @@ In the future this might also allow to enhance the inner-contracts communication
 
 // inspired by https://github.com/dfinity/examples/blob/master/rust/basic_dao/src/basic_dao/src/lib.rs#L13
 thread_local! {
-    static STATE: RefCell<State> = RefCell::default();
+    static STATE: RefCell<Parameters> = RefCell::default();
 }
 
 #[wasm_bindgen()]
 pub async fn handle(interaction: JsValue) -> Option<JsValue> {
-    let action: Result<Action, Error> = interaction.into_serde();
+    let serializer = serde_wasm_bindgen::Serializer::json_compatible();
+
+    let action = serde_wasm_bindgen::from_value::<Action>(interaction);
 
     if action.is_err() {
         let error = Err::<HandlerResult, _>(ContractError::RuntimeError(
             "Error while parsing input".to_string(),
         ));
 
-        return Some(JsValue::from_serde(&error).unwrap());
+        return Some(error.serialize(&serializer).unwrap());
     }
 
     let state = STATE.with(|service| service.borrow().clone());
@@ -67,14 +74,19 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
             STATE.with(|service| service.replace(state));
             None
         }
-        Ok(HandlerResult::Read(_, response)) => Some(JsValue::from_serde(&response).unwrap()),
-        error @ Err(_) => Some(JsValue::from_serde(&error).unwrap()),
+        Ok(HandlerResult::Read(_, response)) => Some(
+            Ok::<ReadResponse, ContractError>(response)
+                .serialize(&serializer)
+                .unwrap(),
+        ),
+        Ok(HandlerResult::None(_)) => None,
+        error @ Err(_) => Some(error.serialize(&serializer).unwrap()),
     }
 }
 
 #[wasm_bindgen(js_name = initState)]
 pub fn init_state(state: &JsValue) {
-    let state_parsed: State = state.into_serde().unwrap();
+    let state_parsed: Parameters = state.into_serde().unwrap();
 
     STATE.with(|service| service.replace(state_parsed));
 }

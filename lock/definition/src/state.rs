@@ -12,7 +12,6 @@ pub const UNIT: u32 = 1_000_000;
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub paused: bool,
-    pub can_evolve: bool,
 
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,
@@ -28,8 +27,9 @@ pub struct Settings {
     // pub exchange_token: String,
 }
 
-#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
-pub struct LockedBalance {
+#[derive(JsonSchema, Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Cliff {
     pub token_id: String,
     pub from: String,
     pub qty: Balance,
@@ -37,15 +37,38 @@ pub struct LockedBalance {
     pub duration: u32,
 }
 
+#[derive(JsonSchema, Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Linear {
+    pub token_id: String,
+    pub from: String,
+    pub qty: Balance,
+    pub at: u32,
+    pub duration: u32,
+    pub unlocked: Balance,
+}
+
+#[derive(JsonSchema, Clone, Serialize, Deserialize, Debug)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum LockedBalance {
+    Cliff(Cliff),
+    Linear(Linear),
+}
+
+#[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
+pub struct InitialState {
+    pub settings: Settings,
+    pub vault: HashMap<String, Vec<LockedBalance>>,
+}
+
 #[derive(JsonSchema, Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct State {
+pub struct Parameters {
     pub name: String,
 
-    pub settings: Settings,
-
-    pub vault: HashMap<String, Vec<LockedBalance>>,
+    pub initial_state: Option<InitialState>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evolve: Option<String>,
+    pub can_evolve: bool,
 }
