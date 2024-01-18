@@ -36,6 +36,12 @@ impl AsyncActionable for Burn {
 
         if balance < self.qty.value {
             return Err(ContractError::OwnerBalanceNotEnough(owner));
+        } else if balance == self.qty.value {
+            token.delete_balances(&owner).await;
+
+            if token.count_balances().await == 0 {
+                KvState::delete_tokens(&token_id).await;
+            }
         } else {
             token
                 .balances(&owner)

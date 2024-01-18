@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::contract_utils::js_imports::{log, Kv};
+use crate::contract_utils::js_imports::Kv;
 use kv_storage::{kv, KvStorage};
 
 mod string {
@@ -64,7 +64,6 @@ pub struct Settings {
     pub default_token: String,
 
     pub paused: bool,
-    pub can_evolve: bool,
 
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,

@@ -9,23 +9,22 @@ use warp_erc1155::state::Parameters;
 
 use crate::{actions::AsyncActionable, state::KvState};
 
-// pub async fn is_approved_for_all_internal(operator: &str, owner: &str) -> bool {
-//     return KvState::approvals(owner).approvals(operator).value().await;
-//     // match state.approvals.get(owner) {
-//     //     Some(approved_ops) => approved_ops.get(operator).unwrap_or(&false).to_owned(),
-//     //     None => false,
-//     // }
-// }
+pub async fn is_approved_for_all_internal(operator: &str, owner: &str) -> bool {
+    if operator == owner {
+        true
+    } else {
+        KvState::approvals(owner)
+            .peek()
+            .approves(operator)
+            .await
+            .unwrap_or(false)
+    }
+}
 
 #[async_trait(?Send)]
 impl AsyncActionable for IsApprovedForAll {
-    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
-        // let approved = is_approved_for_all_internal(&state, &self.operator, &self.owner);
-        let approved = !KvState::approvals(&self.owner)
-            .peek()
-            .approves(&self.operator)
-            .await
-            .unwrap_or(false);
+    async fn action(self, _caller: String, state: Parameters) -> ActionResult {
+        let approved = is_approved_for_all_internal(&self.operator, &self.owner).await;
 
         Ok(HandlerResult::Read(
             state,
@@ -40,7 +39,7 @@ impl AsyncActionable for IsApprovedForAll {
 
 #[async_trait(?Send)]
 impl AsyncActionable for SetApprovalForAll {
-    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
+    async fn action(self, caller: String, state: Parameters) -> ActionResult {
         KvState::approvals(&caller)
             .init_default()
             .await

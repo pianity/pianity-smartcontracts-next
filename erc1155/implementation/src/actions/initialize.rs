@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use warp_erc1155::{
-    action::{ActionResult, BalanceOf, HandlerResult, Initialize, ReadResponse},
+    action::{ActionResult, HandlerResult, Initialize},
     error::ContractError,
-    state::{Balance as ActionBalance, Parameters},
+    state::Parameters,
 };
 
 use crate::{
-    actions::{Actionable, AsyncActionable},
+    actions::AsyncActionable,
     state::{Approvals, Settings, Token},
 };
 
@@ -27,10 +27,7 @@ impl AsyncActionable for Initialize {
                             tx_id: token.tx_id.clone(),
                             ticker: token.ticker.clone(),
                             balances: HashMap::from_iter(token.balances.iter().map(
-                                |(address, balance)| {
-                                    // log(&format!("{}: {}: {}", id, address, balance.value));
-                                    (address.clone(), Balance::new(balance.value))
-                                },
+                                |(address, balance)| (address.clone(), Balance::new(balance.value)),
                             )),
                         },
                     )
@@ -50,7 +47,6 @@ impl AsyncActionable for Initialize {
                 settings: Settings {
                     default_token: init_state.settings.default_token.clone(),
                     paused: init_state.settings.paused,
-                    can_evolve: init_state.settings.can_evolve,
                     super_operators: init_state.settings.super_operators.clone(),
                     operators: init_state.settings.operators.clone(),
                     proxies: init_state.settings.proxies.clone(),

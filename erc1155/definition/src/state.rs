@@ -66,7 +66,6 @@ pub struct Settings {
     pub default_token: String,
 
     pub paused: bool,
-    pub can_evolve: bool,
 
     pub super_operators: Vec<String>,
     pub operators: Vec<String>,

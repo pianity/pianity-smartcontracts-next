@@ -37,7 +37,7 @@ impl AsyncActionable for Configure {
         }
 
         if let Some(can_evolve) = self.can_evolve {
-            KvState::settings().can_evolve().set(&can_evolve).await;
+            state.can_evolve = can_evolve;
         }
 
         if let Some(proxies) = self.proxies {
@@ -55,6 +55,10 @@ impl AsyncActionable for Configure {
                 .await;
         }
 
-        return Ok(HandlerResult::None(state));
+        if let Some(can_evolve) = self.can_evolve {
+            Ok(HandlerResult::Write(state))
+        } else {
+            Ok(HandlerResult::None(state))
+        }
     }
 }

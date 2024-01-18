@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use wasm_bindgen::JsValue;
 
 use warp_erc1155::{
     action::{ActionResult, HandlerResult, Mint},
@@ -8,7 +7,7 @@ use warp_erc1155::{
 };
 
 use crate::{
-    contract_utils::js_imports::{Kv, Transaction},
+    contract_utils::js_imports::Transaction,
     state::{KvState, Token},
     utils::is_op,
 };
@@ -22,7 +21,7 @@ fn get_token_id(prefix: Option<String>, base_id: Option<String>) -> String {
 
 #[async_trait(?Send)]
 impl AsyncActionable for Mint {
-    async fn action(self, caller: String, mut state: Parameters) -> ActionResult {
+    async fn action(self, caller: String, state: Parameters) -> ActionResult {
         if self.qty.value == 0 {
             return Err(ContractError::TransferAmountMustBeHigherThanZero);
         }
@@ -34,20 +33,6 @@ impl AsyncActionable for Mint {
         let token_id = get_token_id(self.prefix, self.base_id);
 
         token_id.chars().all(|c| c.is_alphanumeric() || c == '-');
-
-        // Kv::put(
-        //     &format!("tokens.{}.ticker", token_id),
-        //     JsValue::from_serde(&format!("{}{}", state.default_token, state.ticker_nonce)).unwrap(),
-        // )
-        // .await;
-        //
-        // Kv::put(&format!("tokens.{}.txId", token_id), Transaction::id()).await;
-        //
-        // Kv::put(
-        //     &format!("tokens.{}.balances.{}", token_id, caller),
-        //     JsValue::from(self.qty.value.to_string()),
-        // )
-        // .await;
 
         let default_token = KvState::settings().default_token().get().await;
         let ticker_nonce = KvState::ticker_nonce().get().await;
@@ -69,21 +54,6 @@ impl AsyncActionable for Mint {
             .await;
 
         KvState::ticker_nonce().map(|nonce| nonce + 1).await;
-
-        // state
-        //     .tokens
-        //     .entry(token_id.clone())
-        //     .or_insert(Token {
-        //         ticker: format!("{}{}", state.default_token, state.ticker_nonce),
-        //         tx_id: Some(Transaction::id()),
-        //         ..Default::default()
-        //     })
-        //     .balances
-        //     .entry(caller.clone())
-        //     .or_default()
-        //     .value += self.qty.value;
-
-        // state.ticker_nonce += 1;
 
         Ok(HandlerResult::Write(state))
     }

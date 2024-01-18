@@ -95,6 +95,17 @@ extern "C" {
     #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvPut)]
     pub async fn put(key: &str, value: JsValue) -> Result<(), JsValue>;
 
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvDel)]
+    pub async fn del(key: &str) -> Result<(), JsValue>;
+
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvKeys)]
+    pub async fn keys(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Result<JsValue, JsValue>;
+
     #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvMap)]
     pub async fn map(
         gte: Option<&str>,
@@ -115,10 +126,15 @@ impl KvStorage for Kv {
         KvJs::put(key, value).await.unwrap();
     }
 
-    async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
-        let value = KvJs::get(key).await.unwrap();
+    async fn del(key: &str) {
+        log(&format!("[erc1155] deleting key: \"{}\"", key));
+        KvJs::del(key).await.unwrap();
+    }
 
-        serde_wasm_bindgen::from_value(value).unwrap()
+    async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
+        let value = KvJs::get(key).await.ok()?;
+
+        serde_wasm_bindgen::from_value::<T>(value).ok()
     }
 
     async fn map<T: DeserializeOwned>(
@@ -128,6 +144,23 @@ impl KvStorage for Kv {
         limit: Option<u32>,
     ) -> Vec<(String, T)> {
         serde_wasm_bindgen::from_value(KvJs::map(gte, lt, reverse, limit).await.unwrap()).unwrap()
+    }
+
+    async fn keys(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Vec<String> {
+        let keys = KvJs::keys(gte, lt, reverse, limit).await;
+
+        log(&format!("[erc1155] getting keys: `{:?}`", keys));
+
+        let deser = serde_wasm_bindgen::from_value(keys.unwrap());
+
+        log(&format!("[erc1155] deserialized keys: `{:?}`", deser));
+
+        deser.unwrap()
     }
 }
 

@@ -2,6 +2,6 @@
 /////////////// DO NOT MODIFY THIS FILE /////////////
 /////////////////////////////////////////////////////
 
-pub mod js_imports;
 pub mod entrypoint;
 pub mod foreign_call;
+pub mod js_imports;

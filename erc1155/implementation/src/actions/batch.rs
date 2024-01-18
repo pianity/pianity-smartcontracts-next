@@ -5,7 +5,7 @@ use warp_erc1155::{
     state::Parameters,
 };
 
-use crate::contract::handle;
+use crate::contract::execute_action;
 
 use super::AsyncActionable;
 
@@ -23,7 +23,7 @@ impl AsyncActionable for Batch {
                 return Err(ContractError::ForbiddenNestedBatch);
             }
 
-            state = match handle(state, action).await? {
+            state = match execute_action(Box::new(action), caller.clone(), state).await? {
                 HandlerResult::Write(state) => {
                     write_mode = true;
 

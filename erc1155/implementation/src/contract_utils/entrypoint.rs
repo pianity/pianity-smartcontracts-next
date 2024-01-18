@@ -83,9 +83,9 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
 
 #[wasm_bindgen(js_name = initState)]
 pub fn init_state(state: &JsValue) {
-    let state_parsed: Parameters = state.into_serde().unwrap();
+    let state_parsed: Result<Parameters, _> = serde_wasm_bindgen::from_value(state.clone());
 
-    STATE.with(|service| service.replace(state_parsed));
+    STATE.with(|service| service.replace(state_parsed.expect("Couldn't parse initial state")));
 }
 
 #[wasm_bindgen(js_name = currentState)]

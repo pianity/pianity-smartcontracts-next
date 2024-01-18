@@ -34,6 +34,9 @@ impl AsyncActionable for GetToken {
             ),
         };
 
-        Ok(HandlerResult::Read(state, ReadResponse::GetToken(token)))
+        Ok(HandlerResult::Read(
+            state,
+            ReadResponse::GetToken((token_id, token)),
+        ))
     }
 }

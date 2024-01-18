@@ -2,11 +2,17 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ContractError;
-use crate::state::{Balance, BalancePrecision, Parameters, Settings, Token};
+use crate::state::{Balance, Parameters, Settings, Token};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Initialize;
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AsDirectCaller {
+    pub action: Box<Action>,
+}
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -23,13 +29,17 @@ pub struct GetToken {
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct GetAllTokens;
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadSettings;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Transfer {
     pub from: Option<String>,
-    pub to: String,
+    pub target: String,
     pub token_id: Option<String>,
     pub qty: Balance,
 }
@@ -91,8 +101,10 @@ pub struct Evolve {
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
     Initialize(Initialize),
+    AsDirectCaller(AsDirectCaller),
     BalanceOf(BalanceOf),
     GetToken(GetToken),
+    GetAllTokens(GetAllTokens),
     ReadSettings(ReadSettings),
     Transfer(Transfer),
     Configure(Configure),
@@ -112,7 +124,9 @@ pub enum ReadResponse {
         target: String,
     },
 
-    GetToken(Token),
+    GetToken((String, Token)),
+
+    GetAllTokens(Vec<(String, Token)>),
 
     ReadSettings(Settings),
 
