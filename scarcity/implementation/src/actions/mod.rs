@@ -7,9 +7,11 @@ pub mod batch;
 pub mod configure;
 pub mod edit_attached_royalties;
 pub mod evolve;
-pub mod get_attached_royalties;
+pub mod get_all_royalties;
+pub mod get_royalties;
 pub mod initialize;
 pub mod mint_nft;
+pub mod remove_attached_royalties;
 pub mod transfer;
 
 pub use attach_royalties::*;
@@ -17,9 +19,11 @@ pub use batch::*;
 pub use configure::*;
 pub use edit_attached_royalties::*;
 pub use evolve::*;
-pub use get_attached_royalties::*;
+pub use get_all_royalties::*;
+pub use get_royalties::*;
 pub use initialize::*;
 pub use mint_nft::*;
+pub use remove_attached_royalties::*;
 pub use transfer::*;
 
 use crate::contract_utils::foreign_call::ForeignContractCaller;

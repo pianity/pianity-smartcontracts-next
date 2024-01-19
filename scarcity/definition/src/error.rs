@@ -22,7 +22,7 @@ pub enum ContractError {
     TransferAmountMustBeHigherThanZero,
     TransferFromAndToCannotBeEqual,
     TokenNotFound(String),
-    IDontLikeThisContract,
+    RoyaltiesNotFound(String),
     CallerBalanceNotEnough(u64),
     OnlyOwnerCanEvolve,
     EvolveNotAllowed,
@@ -53,7 +53,11 @@ pub enum ContractError {
 
     QtyMustBeOneForNftTransfers,
 
+    CantUseTransferWithSimpleTokens(String),
+
     ContractIsPaused,
     ContractUninitialized,
     ContractAlreadyInitialized,
+    RoyaltiesNotChanged,
+    RoyaltiesUnchanged,
 }

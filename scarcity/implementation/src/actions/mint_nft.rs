@@ -7,7 +7,7 @@ use warp_erc1155::{
 };
 
 use warp_scarcity::{
-    action::{ActionResult, AttachRoyalties, HandlerResult, MintNft},
+    action::{ActionResult, AttachRoyalties, HandlerResult, MintNft, Scarcity},
     error::ContractError,
     state::Parameters,
 };
@@ -28,17 +28,11 @@ impl AsyncActionable for MintNft {
     ) -> ActionResult {
         let mut mints = Vec::new();
 
-        let (scarcity_name, editions_count) = match self.scarcity {
-            warp_scarcity::action::Scarcity::Unique => ("UNIQUE", 1),
-            warp_scarcity::action::Scarcity::Legendary => ("LEGENDARY", 10),
-            warp_scarcity::action::Scarcity::Epic => ("EPIC", 100),
-            warp_scarcity::action::Scarcity::Rare => ("RARE", 1000),
-        };
-
-        let nft_base_id = self.base_id.clone().unwrap_or_else(Transaction::id);
+        let (scarcity_name, editions_count): (String, u32) =
+            (self.scarcity.to_string(), (&self.scarcity).into());
 
         attach_royalties_internal(&AttachRoyalties {
-            base_id: nft_base_id.clone(),
+            base_id: self.base_id.clone().unwrap_or_else(Transaction::id),
             rate: self.rate,
             royalties: self.royalties.clone(),
         })
@@ -48,7 +42,7 @@ impl AsyncActionable for MintNft {
             let prefix = format!("{}-{}", edition + 1, scarcity_name);
 
             mints.push(Erc1155Action::Action::Mint(Erc1155Action::Mint {
-                base_id: Some(nft_base_id.clone()),
+                base_id: self.base_id.clone(),
                 prefix: Some(prefix),
                 qty: Balance::new(1),
             }));

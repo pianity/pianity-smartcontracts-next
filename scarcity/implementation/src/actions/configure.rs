@@ -18,8 +18,8 @@ impl AsyncActionable for Configure {
     async fn action(
         self,
         caller: String,
-        mut state: Parameters,
-        foreign_caller: &mut ForeignContractCaller,
+        state: Parameters,
+        _foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
         let is_super_op = is_super_op(&caller).await;
         let is_op = is_op(&caller).await;

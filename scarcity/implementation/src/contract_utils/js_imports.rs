@@ -97,6 +97,17 @@ extern "C" {
     #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvPut)]
     pub async fn put(key: &str, value: JsValue) -> Result<(), JsValue>;
 
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvDel)]
+    pub async fn del(key: &str) -> Result<(), JsValue>;
+
+    #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvKeys)]
+    pub async fn keys(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Result<JsValue, JsValue>;
+
     #[wasm_bindgen(catch, static_method_of = KvJs, js_name = kvMap)]
     pub async fn map(
         gte: Option<&str>,
@@ -112,14 +123,19 @@ pub struct Kv;
 impl KvStorage for Kv {
     async fn put<T: Serialize>(key: &str, value: &T) {
         let serializer = serde_wasm_bindgen::Serializer::json_compatible();
+        let value = value.serialize(&serializer).unwrap();
 
-        KvJs::put(key, value.serialize(&serializer).unwrap())
-            .await
-            .unwrap();
+        KvJs::put(key, value).await.unwrap();
+    }
+
+    async fn del(key: &str) {
+        KvJs::del(key).await.unwrap();
     }
 
     async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
-        serde_wasm_bindgen::from_value(KvJs::get(key).await.unwrap()).unwrap()
+        let value = KvJs::get(key).await.ok()?;
+
+        serde_wasm_bindgen::from_value::<T>(value).ok()
     }
 
     async fn map<T: DeserializeOwned>(
@@ -128,11 +144,16 @@ impl KvStorage for Kv {
         reverse: Option<bool>,
         limit: Option<u32>,
     ) -> Vec<(String, T)> {
-        log(&format!(
-            "KV: map: gte: {:?}, lt: {:?}, reverse: {:?}, limit: {:?}",
-            gte, lt, reverse, limit
-        ));
         serde_wasm_bindgen::from_value(KvJs::map(gte, lt, reverse, limit).await.unwrap()).unwrap()
+    }
+
+    async fn keys(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Vec<String> {
+        serde_wasm_bindgen::from_value(KvJs::keys(gte, lt, reverse, limit).await.unwrap()).unwrap()
     }
 }
 

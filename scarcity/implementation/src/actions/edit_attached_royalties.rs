@@ -16,19 +16,36 @@ impl AsyncActionable for EditAttachedRoyalties {
     async fn action(
         self,
         _caller: String,
-        mut state: Parameters,
-        foreign_caller: &mut ForeignContractCaller,
+        state: Parameters,
+        _foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
-        if !State::all_attached_royalties(&self.base_id).exists().await {
-            return Err(ContractError::TokenNotFound(self.base_id));
-        }
+        let old_royalties = State::all_attached_royalties(&self.base_id)
+            .peek()
+            .await
+            .ok_or_else(|| ContractError::RoyaltiesNotFound(self.base_id.clone()))?;
 
-        attach_royalties_internal(&AttachRoyalties {
-            base_id: self.base_id,
-            royalties: self.royalties,
-            rate: self.rate,
-        })
-        .await?;
+        let new_royalties = {
+            let new_royalties = self
+                .royalties
+                .unwrap_or_else(|| old_royalties.royalties.clone());
+            let new_rate = self.rate.unwrap_or(old_royalties.rate);
+
+            if new_royalties != old_royalties.royalties || new_rate != old_royalties.rate {
+                Some(AttachRoyalties {
+                    base_id: self.base_id,
+                    royalties: new_royalties,
+                    rate: new_rate,
+                })
+            } else {
+                None
+            }
+        };
+
+        if let Some(new_royalties) = new_royalties {
+            attach_royalties_internal(&new_royalties).await?;
+        } else {
+            return Err(ContractError::RoyaltiesUnchanged);
+        }
 
         Ok(HandlerResult::None(state))
     }

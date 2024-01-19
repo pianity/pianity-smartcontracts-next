@@ -1,6 +1,6 @@
-use warp_scarcity::{action::Scarcity, state::Parameters};
+use warp_scarcity::action::Scarcity;
 
-use crate::{contract_utils::js_imports::log, state::State};
+use crate::state::State;
 
 pub async fn is_op(address: &str) -> bool {
     State::settings()
@@ -40,25 +40,35 @@ impl ToString for NftId {
     }
 }
 
+pub enum NftIdParseError {
+    InvalidScarcity,
+    InvalidEdition,
+    InvalidShape,
+}
+
 impl TryFrom<&str> for NftId {
-    type Error = ();
+    type Error = NftIdParseError;
 
     fn try_from(id: &str) -> Result<Self, Self::Error> {
         let splited = {
             let mut splited = id.splitn(3, '-');
 
             (
-                splited.next().ok_or(())?,
-                splited.next().ok_or(())?,
-                splited.next().ok_or(())?,
+                splited.next().ok_or(NftIdParseError::InvalidShape)?,
+                splited.next().ok_or(NftIdParseError::InvalidShape)?,
+                splited.next().ok_or(NftIdParseError::InvalidShape)?,
             )
         };
 
-        let scarcity = Scarcity::try_from(splited.1)?;
-        let edition = splited.0.parse::<u32>().unwrap_or(0);
+        let scarcity =
+            Scarcity::try_from(splited.1).map_err(|_| NftIdParseError::InvalidScarcity)?;
+        let edition = splited
+            .0
+            .parse::<u32>()
+            .map_err(|_| NftIdParseError::InvalidEdition)?;
 
         if edition > u32::from(&scarcity) {
-            Err(())
+            Err(NftIdParseError::InvalidEdition)
         } else {
             Ok(Self {
                 base_id: splited.2.to_string(),

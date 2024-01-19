@@ -1,51 +1,23 @@
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 
 use warp_erc1155::{
-    action::{self as Erc1155Action},
+    action::{self as Erc1155Action, Batch},
     error::ContractError as Erc1155ContractError,
-    state::{Balance, BalancePrecision, Parameters as Erc1155State},
+    state::{Balance, BalancePrecision},
 };
 
 use warp_scarcity::{
-    action::{ActionResult, AttachRoyalties, HandlerResult, Transfer},
+    action::{ActionResult, HandlerResult, Transfer},
     error::ContractError,
-    state::{AttachedRoyalties, Parameters, Royalties, UNIT},
+    state::{Parameters, UNIT},
 };
-use wasm_bindgen::UnwrapThrowExt;
 
 use crate::{
     actions::AsyncActionable,
-    contract_utils::{
-        foreign_call::{ForeignContractCaller, ForeignContractState},
-        js_imports::log,
-    },
+    contract_utils::foreign_call::ForeignContractCaller,
     state::State,
     utils::{NftId, ShuffleId, TokenId},
 };
-
-// async fn get_token_owner(
-//     foreign_caller: &mut ForeignContractCaller,
-//     erc1155: &str,
-//     nft_id: &str,
-// ) -> Result<String, ContractError> {
-//     let state = match foreign_caller
-//         .read(&erc1155.to_string())
-//         .await
-//         .map_err(|_err| ContractError::Erc1155ReadFailed)?
-//     {
-//         ForeignContractState::Erc1155(state) => state,
-//     };
-//
-//     let token = state
-//         .tokens
-//         .get(nft_id)
-//         .ok_or(ContractError::TokenOwnerNotFound)?;
-//
-//     let owner = token.balances.iter().next().unwrap_throw();
-//
-//     Ok(owner.0.clone())
-// }
 
 #[async_trait(?Send)]
 impl AsyncActionable for Transfer {
@@ -64,29 +36,22 @@ impl AsyncActionable for Transfer {
         let base_id = match TokenId::from(self.token_id.as_ref()) {
             TokenId::Nft(NftId { base_id, .. }) => {
                 if qty.value != 1 {
-                    Err(ContractError::QtyMustBeOneForNftTransfers)
+                    Err(ContractError::QtyMustBeOneForNftTransfers)?
                 } else {
                     Ok(base_id)
                 }
             }
             TokenId::Shuffle(ShuffleId { base_id }) => Ok(base_id),
-            _ => Err(ContractError::InvalidTokenId),
+            TokenId::Token(token_id) => {
+                Err(ContractError::CantUseTransferWithSimpleTokens(token_id))
+            }
         }?;
 
-        // let attached_royalties = state
-        //     .all_attached_royalties
-        //     .get(&base_id)
-        //     // TODO: Rename TokenNotFound to NoRoyaltiesAttached
-        //     .ok_or_else(|| ContractError::TokenNotFound(self.token_id.clone()))?;
-
-        let state_attached_royalties = State::all_attached_royalties(&base_id)
-            .ok_or(ContractError::TokenNotFound(self.token_id.clone()))
-            .await?;
-
-        let attached_royalties = state_attached_royalties.get().await;
-
-        // let nft_owner =
-        //     get_token_owner(foreign_caller, &state.settings.erc1155, &self.token_id).await?;
+        let attached_royalties = State::all_attached_royalties(&base_id)
+            .ok_or(ContractError::RoyaltiesNotFound(self.token_id.clone()))
+            .await?
+            .get()
+            .await;
 
         let token_owner = self.from.clone();
 
@@ -104,8 +69,8 @@ impl AsyncActionable for Transfer {
             // If this transfer is a resell, pay the NFT owner.
             if is_resell {
                 transfers.push(Erc1155Action::Transfer {
-                    from: Some(self.to.clone()),
-                    to: token_owner.clone(),
+                    from: Some(self.target.clone()),
+                    target: token_owner.clone(),
                     token_id: None,
                     qty: Balance::new(
                         (self.price.value as f32 * (rate as f32 / UNIT as f32)) as BalancePrecision,
@@ -123,8 +88,8 @@ impl AsyncActionable for Transfer {
                         as BalancePrecision;
 
                     transfers.push(Erc1155Action::Transfer {
-                        from: Some(self.to.clone()),
-                        to: address.clone(),
+                        from: Some(self.target.clone()),
+                        target: address.clone(),
                         token_id: None,
                         qty: Balance::new(royalty_amount),
                     });
@@ -134,7 +99,7 @@ impl AsyncActionable for Transfer {
         // Transfer the token.
         transfers.push(Erc1155Action::Transfer {
             from: Some(token_owner),
-            to: self.to.clone(),
+            target: self.target.clone(),
             token_id: Some(self.token_id),
             qty,
         });
@@ -144,13 +109,10 @@ impl AsyncActionable for Transfer {
             .map(|transfer| Erc1155Action::Action::Transfer(transfer))
             .collect();
 
-        let transaction_batch =
-            Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers });
-
         foreign_caller
             .write::<Erc1155ContractError, Erc1155Action::Action>(
                 &State::settings().erc1155().get().await,
-                transaction_batch,
+                Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
             )
             .await
             .or_else(|err| Err(ContractError::Erc1155Error(err)))?;

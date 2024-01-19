@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use warp_erc1155::state::Balance;
+
+use warp_erc1155::{action::Transfer as Erc1155Transfer, state::Balance};
 
 use crate::error::ContractError;
 use crate::state::{AttachedRoyalties, Parameters, Royalties};
@@ -11,9 +12,13 @@ pub struct Initialize;
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GetAttachedRoyalties {
+pub struct GetRoyalties {
     pub base_id: String,
 }
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetAllRoyalties;
 
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,8 +32,14 @@ pub struct AttachRoyalties {
 #[serde(rename_all = "camelCase")]
 pub struct EditAttachedRoyalties {
     pub base_id: String,
-    pub royalties: Royalties,
-    pub rate: u32,
+    pub royalties: Option<Royalties>,
+    pub rate: Option<u32>,
+}
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveAttachedRoyalties {
+    pub base_id: String,
 }
 
 // TODO: This code is mostly duplicated from the Shuffle contract. It should be refactored to be
@@ -46,11 +57,11 @@ impl TryFrom<&str> for Scarcity {
     type Error = ();
 
     fn try_from(scarcity_raw: &str) -> Result<Self, Self::Error> {
-        match scarcity_raw.to_lowercase().as_str() {
-            "unique" => Ok(Self::Unique),
-            "legendary" => Ok(Self::Legendary),
-            "epic" => Ok(Self::Epic),
-            "rare" => Ok(Self::Rare),
+        match scarcity_raw.to_uppercase().as_str() {
+            "UNIQUE" => Ok(Self::Unique),
+            "LEGENDARY" => Ok(Self::Legendary),
+            "EPIC" => Ok(Self::Epic),
+            "RARE" => Ok(Self::Rare),
             _ => Err(()),
         }
     }
@@ -91,7 +102,7 @@ pub struct MintNft {
 #[serde(rename_all = "camelCase")]
 pub struct Transfer {
     pub from: String,
-    pub to: String,
+    pub target: String,
     pub token_id: String,
     pub price: Balance,
     pub qty: Option<Balance>,
@@ -123,10 +134,12 @@ pub struct Batch {
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "function")]
 pub enum Action {
-    GetAttachedRoylaties(GetAttachedRoyalties),
     Initialize(Initialize),
-    EditAttachedRoyalties(EditAttachedRoyalties),
+    GetRoyalties(GetRoyalties),
+    GetAllRoyalties(GetAllRoyalties),
     AttachRoyalties(AttachRoyalties),
+    EditAttachedRoyalties(EditAttachedRoyalties),
+    RemoveAttachedRoyalties(RemoveAttachedRoyalties),
     MintNft(MintNft),
     Transfer(Transfer),
     Configure(Configure),
@@ -137,7 +150,8 @@ pub enum Action {
 #[derive(JsonSchema, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum ReadResponse {
-    GetAttachedRoylaties(AttachedRoyalties),
+    GetRoyalties((String, AttachedRoyalties)),
+    GetAllRoyalties(Vec<(String, AttachedRoyalties)>),
     Batch(Vec<ReadResponse>),
 }
 
