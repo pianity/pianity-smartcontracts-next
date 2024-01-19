@@ -9,6 +9,7 @@ erc1155 = "Erc1155 contract package"
 scarcity = "scarcity contract package"
 shuffle = "Shuffle contract package"
 lock = "Lock contract package"
+macro = "KV macro package"
 tests = "Tests package"
 
 [kinds]

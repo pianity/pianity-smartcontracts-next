@@ -9,8 +9,7 @@ edition = "2021"
 kv-macro = { path = "../kv-macro" }
 async-trait = "0.1.56"
 serde = { version = "1.0", features = ["derive"] }
-tokio-test = "0.4.2"
-# tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["test-util", "macros"] }
 
 [dev-dependencies]
 serde_json = "1.0"

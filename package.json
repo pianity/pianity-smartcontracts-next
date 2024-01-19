@@ -27,6 +27,7 @@
         "koumu": "0.1.0"
     },
     "resolutions": {
-        "warp-contracts": "portal:/home/noom/dev/pianity/warp"
+        "warp-contracts": "portal:/home/noom/dev/pianity/warp",
+        "arweave": "1.13.7"
     }
 }

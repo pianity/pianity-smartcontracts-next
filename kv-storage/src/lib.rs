@@ -6,7 +6,14 @@ pub use kv_macro::kv_storage as kv;
 #[async_trait(?Send)]
 pub trait KvStorage {
     async fn put<T: Serialize>(key: &str, value: &T);
+    async fn del(key: &str);
     async fn get<T: DeserializeOwned>(key: &str) -> Option<T>;
+    async fn keys(
+        gte: Option<&str>,
+        lt: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<u32>,
+    ) -> Vec<String>;
     async fn map<T: DeserializeOwned>(
         gte: Option<&str>,
         lt: Option<&str>,
@@ -17,12 +24,19 @@ pub trait KvStorage {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{
+        cell::{OnceCell, RefCell},
+        collections::HashMap,
+    };
 
     use crate::{kv, KvStorage};
     use async_trait::async_trait;
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
     use serde_json;
+
+    thread_local! {
+        static STORE: RefCell<HashMap<String, String>> = RefCell::default();
+    }
 
     pub struct Kv;
 
@@ -30,23 +44,59 @@ mod tests {
     impl KvStorage for Kv {
         async fn put<T: Serialize>(key: &str, value: &T) {
             println!("put: {} = {:?}", key, serde_json::to_string(value).unwrap());
+
+            STORE.with(|store| {
+                store
+                    .borrow_mut()
+                    .insert(String::from(key), serde_json::to_string(value).unwrap());
+            });
+        }
+
+        async fn del(key: &str) {
+            println!("del: {}", key);
+
+            STORE.with(|store| {
+                store
+                    .borrow_mut()
+                    .remove(key)
+                    .expect(&format!("couldn't delete: {}", key));
+            });
         }
 
         async fn get<T: DeserializeOwned>(key: &str) -> Option<T> {
             println!("get: {}", key);
 
-            match key {
-                ".the_name" => Some(serde_json::from_str("\"hello\"").unwrap()),
-                // ".tokens.bob" => {
-                //     Some(serde_json::from_str(r#"{ "name": "bob", "balance": 0 }"#).unwrap())
-                // }
-                ".tokens.PTY.name" => Some(serde_json::from_str(r#""PTY""#).unwrap()),
-                ".tokens.PTY.balances.bob" => Some(serde_json::from_str(r#"123"#).unwrap()),
-                ".settings.paused" => Some(serde_json::from_str("false").unwrap()),
-                _ => None,
-            }
+            STORE.with(|store| {
+                store
+                    .borrow()
+                    .get(key)
+                    .map(|value| serde_json::from_str(value).unwrap())
+            })
+        }
 
-            // serde_json::from_str("\"bonjour\"").unwrap()
+        async fn keys(
+            gte: Option<&str>,
+            lt: Option<&str>,
+            reverse: Option<bool>,
+            limit: Option<u32>,
+        ) -> Vec<String> {
+            println!("keys: {:?}, {:?}, {:?}, {:?}", gte, lt, reverse, limit);
+
+            let keys = STORE.with(|store| {
+                store
+                    .borrow()
+                    .iter()
+                    .filter(|(key, _)| {
+                        let (gte, lt) = (String::from(gte.unwrap()), String::from(lt.unwrap()));
+
+                        **key >= gte && **key < lt
+                    })
+                    .map(|(key, _)| key.clone())
+                    .collect()
+            });
+
+            println!("keys: {:?}", keys);
+            keys
         }
 
         async fn map<T: DeserializeOwned>(
@@ -57,18 +107,55 @@ mod tests {
         ) -> Vec<(String, T)> {
             println!("map: {:?}, {:?}, {:?}, {:?}", gte, lt, reverse, limit);
 
-            Vec::new()
+            let map: Vec<(String, T)> = STORE.with(|store| {
+                store
+                    .borrow()
+                    .iter()
+                    .filter(|(key, _)| {
+                        let (gte, lt) = (String::from(gte.unwrap()), String::from(lt.unwrap()));
+
+                        **key >= gte && **key < lt
+                    })
+                    .map(|(key, value)| (key.clone(), serde_json::from_str(value).unwrap()))
+                    .collect()
+            });
+
+            println!(
+                "map: {:?}",
+                map.iter()
+                    .map(|(key, _)| key.clone())
+                    .collect::<Vec<String>>()
+            );
+            map
         }
+    }
+
+    #[kv(impl = "Kv", subpath)]
+    struct Friend {
+        #[kv(map)]
+        relations: String,
+    }
+
+    #[kv(impl = "Kv", subpath)]
+    struct Person {
+        name: String,
+        age: u32,
+        #[kv(map, subpath)]
+        friends: Friend,
     }
 
     #[kv(impl = "Kv")]
     struct State {
+        #[kv(map, subpath)]
+        people: Person,
+        #[kv(map)]
+        colors: String,
+
         the_name: Option<String>,
         #[kv(subpath)]
         settings: Settings,
         #[kv(map, subpath)]
         tokens: Token,
-        // tokens: u32,
     }
 
     #[kv(impl = "Kv", subpath)]
@@ -82,6 +169,7 @@ mod tests {
         name: String,
         #[kv(map)]
         balances: u32,
+        tx_id: Option<String>,
     }
 
     fn capitalize(string: &str) -> String {
@@ -104,6 +192,64 @@ mod tests {
     #[tokio::test]
     async fn test_macro() {
         State {
+            people: HashMap::from([
+                (
+                    "noom".to_string(),
+                    Person {
+                        name: "noom".to_string(),
+                        age: 123,
+                        friends: HashMap::from([
+                            (
+                                "bob".to_string(),
+                                Friend {
+                                    relations: HashMap::from([
+                                        ("bob".to_string(), "noom".to_string()),
+                                        ("alice".to_string(), "noom".to_string()),
+                                        ("alfred".to_string(), "noom".to_string()),
+                                        ("david".to_string(), "noom".to_string()),
+                                    ]),
+                                },
+                            ),
+                            (
+                                "alice".to_string(),
+                                Friend {
+                                    relations: HashMap::from([
+                                        ("bob".to_string(), "noom".to_string()),
+                                        ("alice".to_string(), "noom".to_string()),
+                                        ("alfred".to_string(), "noom".to_string()),
+                                        ("david".to_string(), "noom".to_string()),
+                                    ]),
+                                },
+                            ),
+                            (
+                                "alfred".to_string(),
+                                Friend {
+                                    relations: HashMap::from([
+                                        ("bob".to_string(), "noom".to_string()),
+                                        ("alice".to_string(), "noom".to_string()),
+                                        ("alfred".to_string(), "noom".to_string()),
+                                        ("david".to_string(), "noom".to_string()),
+                                    ]),
+                                },
+                            ),
+                        ]),
+                    },
+                ),
+                (
+                    "bob".to_string(),
+                    Person {
+                        name: "bob".to_string(),
+                        age: 123,
+                        friends: HashMap::new(),
+                    },
+                ),
+            ]),
+            colors: HashMap::from([
+                ("red".to_string(), "ff0000".to_string()),
+                ("green".to_string(), "00ff00".to_string()),
+                ("blue".to_string(), "0000ff".to_string()),
+            ]),
+
             the_name: None,
             settings: Settings {
                 paused: false,
@@ -113,6 +259,7 @@ mod tests {
                 (
                     String::from("PTY"),
                     Token {
+                        tx_id: None,
                         name: String::from("PTYname"),
                         balances: HashMap::from([
                             (String::from("bob"), 123),
@@ -123,6 +270,7 @@ mod tests {
                 (
                     String::from("PIA"),
                     Token {
+                        tx_id: None,
                         name: String::from("PIAname"),
                         balances: HashMap::from([
                             (String::from("alfred"), 456),
@@ -137,15 +285,38 @@ mod tests {
 
         println!("-------------");
 
-        println!(
-            "thename: {:?}",
-            State::tokens("PTY")
-                .init_default()
-                .await
-                .list_balances()
-                .await
-        );
+        let pty = State::tokens("PTY")
+            .ok_or("err")
+            .await
+            .unwrap()
+            .tx_id()
+            .get()
+            .await;
 
+        println!("{:?}", pty);
+
+        // let tokens = State::list_tokens().await;
+        //
+        // println!("tokens length: {}", tokens.len());
+        //
+        // println!("colors: {:?}", State::list_colors().await);
+
+        // State::people("noom").ok_or("err")?;
+
+        // State::delete_tokens("PTY").await;
+        // State::delete_people("noom").await;
+        // State::delete_colors("red").await;
+        // State::delete_colors("green").await;
+
+        // println!(
+        //     "thename: {:?}",
+        //     State::tokens("PTY")
+        //         .init_default()
+        //         .await
+        //         .list_balances()
+        //         .await
+        // );
+        //
         // let bobsBalance = State::tokens("PTY")
         //     .init_default()
         //     .await

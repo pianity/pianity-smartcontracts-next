@@ -113,7 +113,7 @@ fn gen_field_name(
     field_name: &Ident,
     field_args: &FieldArgs,
     macro_args: &MacroArgs,
-    return_type: Ident,
+    return_type: &Ident,
 ) -> TokenStream {
     let mut fun_args: Vec<TokenStream> = Vec::new();
     let mut path_args = Vec::new();
@@ -429,13 +429,16 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     quote!()
                 };
 
-                let return_type = if !field_args.map {
-                    return_type
-                } else {
-                    field_maybe_struct_name
-                };
-
-                let field = gen_field_name(field_name, &field_args, &macro_args, return_type);
+                let field = gen_field_name(
+                    field_name,
+                    &field_args,
+                    &macro_args,
+                    if field_args.map {
+                        &field_maybe_struct_name
+                    } else {
+                        &return_type
+                    },
+                );
                 let field_delete = if field_args.map {
                     let fn_name = format_ident!("delete_{}", field_name);
                     let fn_args = if macro_args.subpath {
@@ -492,14 +495,14 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     };
 
                     let (gte, lt) = if macro_args.subpath {
-                        let quoted_field_name = format!("{}", field_name);
+                        let quoted_field_name = format!("{}.", field_name);
                         let gte = quote!(Some(&format!("{}.{}", self.0, #quoted_field_name)));
                         let lt = quote!(Some(&format!("{}.{}\x7f", self.0, #quoted_field_name)));
 
                         (gte, lt)
                     } else {
-                        let gte = format!("{}.", field_name);
-                        let lt = format!("{}.\x7f", field_name);
+                        let gte = format!(".{}.", field_name);
+                        let lt = format!(".{}.\x7f", field_name);
 
                         (quote!(Some(#gte)), quote!(Some(#lt)))
                     };
@@ -522,6 +525,49 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                                 .collect::<Vec<_>>()
                         }
                     }
+                } else if field_args.map && field_args.subpath {
+                    let fn_name = format_ident!("list_{}", field_name);
+                    let fn_args = if macro_args.subpath {
+                        quote!(&self)
+                    } else {
+                        quote!()
+                    };
+
+                    let (gte, lt) = if macro_args.subpath {
+                        let quoted_field_name = format!("{}.", field_name);
+                        let gte = quote!(format!("{}.{}", self.0, #quoted_field_name));
+                        let lt = quote!(format!("{}.{}\x7f", self.0, #quoted_field_name));
+
+                        (gte, lt)
+                    } else {
+                        let gte = format!(".{}.", field_name);
+                        let lt = format!(".{}.\x7f", field_name);
+
+                        (quote!(#gte), quote!(#lt))
+                    };
+
+                    quote! {
+                        pub async fn #fn_name(#fn_args) -> Vec<(String, #return_type)> {
+                            let keys = #kv_struct::keys(
+                                Some(&#gte),
+                                Some(&#lt),
+                                None,
+                                None
+                            ).await;
+
+                            keys
+                                .into_iter()
+                                .fold(Vec::new(), |mut acc, key| {
+                                    let name = key.split_at(#gte.len()).1.split('.').next().unwrap();
+                                    let key = format!("{}{}", #gte, name);
+                                    if acc.iter().find(|(hay_name, _)| hay_name == name).is_none() {
+                                        acc.push((name.to_string(), #return_type(key)));
+                                    }
+                                    acc
+                                })
+                        }
+                    }
+
                 } else {
                     quote!()
                 };
@@ -534,14 +580,14 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
                     };
 
                     let (gte, lt) = if macro_args.subpath {
-                        let quoted_field_name = format!("{}", field_name);
+                        let quoted_field_name = format!("{}.", field_name);
                         let gte = quote!(Some(&format!("{}.{}", self.0, #quoted_field_name)));
                         let lt = quote!(Some(&format!("{}.{}\x7f", self.0, #quoted_field_name)));
 
                         (gte, lt)
                     } else {
-                        let gte = format!("{}.", field_name);
-                        let lt = format!("{}.\x7f", field_name);
+                        let gte = format!(".{}.", field_name);
+                        let lt = format!(".{}.\x7f", field_name);
 
                         (quote!(Some(#gte)), quote!(Some(#lt)))
                     };
