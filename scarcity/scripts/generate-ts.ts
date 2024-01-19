@@ -27,28 +27,24 @@ export type Actions = {
     );
 }
 
-function getAction1Content(source: string): string | undefined {
-    const sourceFile = createSourceFile("Action.ts", source, ScriptTarget.Latest);
+function fixRecursiveType(source: string, type: string): string {
+    const sourceFile = createSourceFile(`${type}.ts`, source, ScriptTarget.Latest);
 
-    let action1Content: string | undefined;
+    let recurTypeContent: string | undefined;
     forEachChild(sourceFile, (node) => {
-        if (!action1Content && node.kind === SyntaxKind.TypeAliasDeclaration) {
+        if (!recurTypeContent && node.kind === SyntaxKind.TypeAliasDeclaration) {
             const identifierText = node
                 .getChildren(sourceFile)
                 .find(({ kind }) => kind === SyntaxKind.Identifier)
                 ?.getText(sourceFile);
 
-            if (identifierText === "Action1") {
-                action1Content = node.getText(sourceFile);
+            if (identifierText === `${type}1`) {
+                recurTypeContent = node.getText(sourceFile);
             }
         }
     });
 
-    return action1Content;
-}
-
-function fixRecursiveActionType(content: string): string {
-    return content.replace(getAction1Content(content), "").replace("Action1", "Action");
+    return source.replace(recurTypeContent, "").replace(`${type}1`, type);
 }
 
 (async () => {
@@ -65,7 +61,9 @@ function fixRecursiveActionType(content: string): string {
         });
 
         if (nameWoExt === "Action") {
-            tsContent = addActionsType(fixRecursiveActionType(tsContent));
+            tsContent = addActionsType(fixRecursiveType(tsContent, nameWoExt));
+        } else if (nameWoExt === "ReadResponse") {
+            tsContent = fixRecursiveType(tsContent, nameWoExt);
         }
 
         writeFileSync(tsPath, tsContent);
