@@ -19,30 +19,27 @@ import {
 import Irys from "@irys/sdk";
 
 import { Parameters as Erc1155State } from "erc1155/State";
-import { Action as Erc1155Action } from "erc1155/Action";
-import { ArweaveSigner } from "warp-contracts-plugin-deploy";
 import { Parameters as ScarcityState } from "scarcity/State";
-// import { State as ShuffleState } from "shuffle/State";
-// import { State as LockState } from "lock/State";
-//
-// export const UNIT = 1_000_000;
+import { Parameters as LockState } from "lock/State";
+import { Signer } from "warp-arbundles";
+import { ArweaveSigner } from "warp-contracts-plugin-deploy";
 
-// export function expectOk(
-//     result: SafeWriteInteractionResponse<unknown>,
-// ): asserts result is InteractionSuccess {
-//     if (result?.type !== "ok") {
-//         console.log("interaction is error:", JSON.stringify(result, undefined, 2));
-//     }
-//
-//     expect(result?.type).toEqual("ok");
-// }
+export const UNIT = 1_000_000;
 
 export function expectOk(result: {
     type: InteractionResultType;
 }): asserts result is { type: "ok" } {
-    expect(result?.type, `interaction isn't ok: ${JSON.stringify(result, undefined, 2)}`).toEqual(
-        "ok",
-    );
+    const stack = new Error().stack;
+
+    try {
+        expect(
+            result?.type,
+            `interaction isn't ok: ${JSON.stringify(result, undefined, 2)}`,
+        ).toEqual("ok");
+    } catch (error) {
+        console.log(stack);
+        throw error;
+    }
 }
 
 export function expectError<ERROR, const NARROWED_ERROR extends ERROR | undefined = undefined>(
@@ -53,13 +50,20 @@ export function expectError<ERROR, const NARROWED_ERROR extends ERROR | undefine
         console.log("interaction is ok:", JSON.stringify(result, undefined, 2));
     }
 
-    expect(
-        result?.type,
-        `interaction isn't error: ${JSON.stringify(result, undefined, 2)}`,
-    ).toEqual("error");
+    const stack = new Error().stack;
 
-    if (expectedError) {
-        expect((result as InteractionFailure<ERROR>).error).toEqual(expectedError);
+    try {
+        expect(
+            result?.type,
+            `interaction isn't error: ${JSON.stringify(result, undefined, 2)}`,
+        ).toEqual("error");
+
+        if (expectedError) {
+            expect((result as InteractionFailure<ERROR>).error).toEqual(expectedError);
+        }
+    } catch (error) {
+        console.log(stack);
+        throw error;
     }
 }
 
@@ -204,10 +208,10 @@ export async function deployContract<T extends ContractName>(
         ? Erc1155State
         : T extends "scarcity"
         ? ScarcityState
+        : T extends "lock"
+        ? LockState
         : // : T extends "shuffle"
           // ? ShuffleState
-          // : T extends "lock"
-          // ? LockState
           never,
 ) {
     const wasmDir = `../${contract}/implementation/pkg`;
@@ -236,7 +240,7 @@ export type SafeWriteInteractionResponse<T> = InteractionSuccess | InteractionFa
 
 export type Interactor<ACTION, ERROR> = (
     interaction: ACTION,
-    options?: { wallet?: JWKInterface } & WriteInteractionOptions,
+    options?: { wallet?: JWKInterface | Signer; mine?: boolean } & WriteInteractionOptions,
 ) => Promise<SafeWriteInteractionResponse<ERROR>>;
 
 export function createInteractor<ACTION, ERROR>(
@@ -249,22 +253,28 @@ export function createInteractor<ACTION, ERROR>(
 
     return async (
         interaction: ACTION,
-        options: { wallet?: JWKInterface } & WriteInteractionOptions = {},
+        options: { wallet?: JWKInterface | Signer; mine?: boolean } & WriteInteractionOptions = {},
     ) => {
         if (options.wallet) {
             contract.connect(options.wallet);
         } else {
             contract.connect(defaultWallet);
         }
+        options.mine ??= true;
 
         const now = Date.now();
         try {
+            console.log("CALLING WRITE INTERACTION");
             const interactionResult = await contract.writeInteraction(interaction, {
                 ...defaultOptions,
                 ...options,
             });
             console.log("interaction took", Date.now() - now, "ms");
-            await warp.testing.mineBlock();
+
+            if (options.mine) {
+                console.log("MINING A BLOCK");
+                await warp.testing.mineBlock();
+            }
 
             return { type: "ok", ...interactionResult! };
         } catch (error) {
@@ -356,4 +366,20 @@ export function range(end: number, start?: number): number[] {
 export function dbg<T>(args: T): T {
     console.log(args);
     return args;
+}
+
+export function x<T>(fn: () => T): T {
+    return fn();
+}
+
+export function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function waitBlocks(arweave: Arweave, blocks: number) {
+    const height = (await arweave.network.getInfo()).height;
+
+    while ((await arweave.network.getInfo()).height < height + blocks) {
+        await sleep(1000);
+    }
 }

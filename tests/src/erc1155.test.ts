@@ -1,59 +1,10 @@
-// type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void
-//     ? I
-//     : never;
-//
-// type Action =
-//     | {
-//           function: "balanceOf";
-//           address: string;
-//       }
-//     | {
-//           function: "isApprovedForAll";
-//           address: string;
-//       }
-//     | {
-//           function: "mint";
-//           address: string;
-//       };
-//
-// type Result =
-//     | {
-//           balanceOf: {
-//               address: string;
-//               balance: string;
-//           };
-//       }
-//     | {
-//           isApprovedForAll: {
-//               address: string;
-//               approved: boolean;
-//           };
-//       };
-//
-// // Higher-order function `createView`
-// function createView<Result, Action>() {
-//     type Results = UnionToIntersection<Result>;
-//     type FunctionsWithResults = keyof Results;
-//
-//     return function view<T extends Action & { function: FunctionsWithResults }>(
-//         action: T,
-//     ): Results[T["function"]] {
-//         return null as any;
-//     };
-// }
-//
-// // Usage
-// const viewFunction = createView<Result, Action>();
-// const result = viewFunction({ function: "balanceOf", address: "0x123" });
-
-// const test = view({ function: "balanceOf", address: "123" });
-
-// import { it, expect, test, beforeAll, afterAll } from "@jest/globals";
-import { it, expect, test, beforeAll, afterAll } from "vitest";
+import { it, expect, beforeAll, afterAll } from "vitest";
 import Arlocal from "arlocal";
 import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 import { DeployPlugin } from "warp-contracts-plugin-deploy";
+import BigNumber from "bignumber.js";
+import { EthereumSigner } from "arbundles";
 
 import { Parameters as State, Token } from "erc1155/State";
 import { Action } from "erc1155/Action";
@@ -66,6 +17,8 @@ import {
     deployContract,
     deployInitTx,
     deployMainnetContract,
+    expectError,
+    expectOk,
     // expectError,
     // expectOk,
     generateWallet,
@@ -73,6 +26,7 @@ import {
     range,
     Viewer,
 } from "@/utils";
+import { PgSortKeyCache, PgSortKeyCacheOptions } from "warp-contracts-postgres";
 
 let arlocal: Arlocal;
 let warp: Warp;
@@ -82,36 +36,36 @@ let user: Wallet;
 
 let contract: Contract<State>;
 let contractId: string;
-let interact: Interactor<Action>;
-let view: Viewer<Action, ReadResponse, State>;
+let interact: Interactor<Action, ContractError>;
+let view: Viewer<Action, ReadResponse, State, ContractError>;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
     LoggerFactory.INST.logLevel("error", "WASM:Rust");
     // LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
+    const cacheOpts = (tableName: string): PgSortKeyCacheOptions => ({
+        tableName,
+        host: "localhost",
+        port: 5432,
+        database: "warp",
+        user: "warp",
+        schemaName: "warpschema",
+        minEntriesPerKey: 1,
+        maxEntriesPerKey: 10000,
+    });
+
     arlocal = new Arlocal(1984, false, `./arlocal.erc1155.db`, false);
     await arlocal.start();
-    warp = WarpFactory.forLocal(1984, undefined, { inMemory: true, dbLocation: "/dev/null" }).use(
-        new DeployPlugin(),
-    );
+    warp = WarpFactory.forLocal(1984, undefined, { inMemory: true, dbLocation: "/dev/null" })
+        .use(new DeployPlugin())
+        // NOTE: disabled because postgres' cache implementation of `keys` is broken
+        .useKVStorageFactory((contractTxId) => new PgSortKeyCache(cacheOpts(contractTxId)));
     op = await generateWallet();
     user = await generateWallet();
 
     await warp.testing.addFunds(op.jwk);
     await warp.testing.addFunds(user.jwk);
-
-    // const moreTokens: Record<string, Token> = {};
-    // for (let i = 0; i < 100_000; i++) {
-    //     const balances: Record<string, string> = {};
-    //     for (let j = 0; j < 100; j++) {
-    //         balances[`addess-${j}`] = "1000";
-    //     }
-    //     moreTokens[`PTY-${i}`] = {
-    //         ticker: `PTY-${i}`,
-    //         balances,
-    //     };
-    // }
 
     const balances: Record<string, string> = {};
     for (let j = 0; j < 100; j++) {
@@ -131,7 +85,6 @@ beforeAll(async () => {
                 operators: [],
                 proxies: [],
                 allowFreeTransfer: true,
-                canEvolve: false,
             },
             tokens: {
                 DOL: {
@@ -148,20 +101,19 @@ beforeAll(async () => {
         canEvolve: false,
     };
 
-    contractId = (await deployInitTx(warp, op.jwk, "erc1155", JSON.stringify(initState)))
-        .contractTxId;
-    // contractId = (await deployContract(warp, op.jwk, "erc1155", initState)).contractTxId;
+    contractId = (await deployContract(warp, op.jwk, "erc1155", initState)).contractTxId;
     console.log("contract deployed in ", (Date.now() - time) / 1000, "seconds");
     contract = warp
         .contract<State>(contractId)
         .setEvaluationOptions({
             useKVStorage: true,
-            internalWrites: false,
-            throwOnInternalWriteError: false,
+            internalWrites: true,
+            mineArLocalBlocks: false,
+            // throwOnInternalWriteError: false,
         })
         .connect(op.jwk);
-    interact = createInteractor<Action>(warp, contract, op.jwk);
-    view = createViewer<Action, ReadResponse, State>(contract);
+    interact = createInteractor<Action, ContractError>(warp, contract, op.jwk);
+    view = createViewer<Action, ReadResponse, State, ContractError>(contract);
 
     console.log("OP:", op.address, "\nUSER:", user.address, "\nERC1155:", contractId);
 }, 120_000);
@@ -170,165 +122,191 @@ afterAll(async () => {
     await arlocal.stop();
 });
 
-it(
-    "should transfer some tokens to user",
-    async () => {
-        console.log("###########################################>>>>>>>>>>>>>>>>>>> EXEC1");
-        await interact(
-            {
-                function: "transfer",
-                to: user.address,
-                tokenId: "DOL",
-                qty: "100",
-            },
-            {
-                wallet: op.jwk,
-            },
-        );
+function calculateTotalQty(token: Token): string {
+    return (
+        Object.values(token.balances)
+            // TODO: Use BigInt instead of parseInt
+            .reduce((sum, balance) => sum + parseInt(balance), 0)
+            .toString()
+    );
+}
 
-        console.log("###########################################>>>>>>>>>>>>>>>>>>> EXEC2");
-        const opBalance = await view({ function: "balanceOf", target: user.address });
+it("fail if contract is not initialized", async () => {
+    const stateBefore = (await contract.readState()).cachedValue.state;
+    expect(stateBefore.initialState).toBeTruthy();
 
-        console.log("###########################################>>>>>>>>>>>>>>>>>>> EXEC3");
-        const userBalance = await view({ function: "balanceOf", target: user.address });
+    const result = await interact({
+        function: "mint",
+        qty: "1",
+    });
 
-        expect(opBalance.result.balanceOf.balance).toBe("100");
-        expect(userBalance.result.balanceOf.balance).toBe("100");
-    },
-    { timeout: 5_000 },
-);
+    expectError(result, { kind: "ContractUninitialized" });
+});
 
-// it("should not accept interactions when paused", async () => {
-//     await interact({ function: "configure", paused: true });
-//
-//     await expect(interact({ function: "balanceOf", target: "" })).rejects.toThrow();
-//
-//     await interact({ function: "configure", paused: false });
-// });
+it("initialize contract", async () => {
+    const stateBefore = (await contract.readState()).cachedValue.state;
+    expect(stateBefore.initialState).toBeTruthy();
 
-// it("should not accept interactions when paused", async () => {
-//     expectOk(await interact({ function: "configure", paused: true }));
-//
-//     expectError(await interact({ function: "balanceOf", target: "" }), {
-//         kind: "ContractIsPaused",
-//     });
-//
-//     expectOk(await interact({ function: "configure", paused: false }));
-// });
-//
-// it("should transfer some tokens to user", async () => {
-//     await interact({
-//         function: "transfer",
-//         to: user.address,
-//         tokenId: "DOL",
-//         qty: "100",
-//     });
-//
-//     const { state } = (await contract.readState()).cachedValue;
-//     expect(state.tokens.DOL.balances[op.address]).toBe("100");
-//     expect(state.tokens.DOL.balances[user.address]).toBe("100");
-// });
-//
-// it("should mint an NFT", async () => {
-//     const mintResponse = await interact({
-//         function: "mint",
-//         prefix: "NFT",
-//         qty: "1",
-//     });
-//
-//     expectOk(mintResponse);
-//
-//     const tokenId = `NFT-${mintResponse?.originalTxId}`;
-//
-//     const { state } = (await contract.readState()).cachedValue;
-//     expect(state.tokens[tokenId].balances[op.address]).toBe("1");
-// });
-//
-// it("should burn an NFT", async () => {
-//     const mintResponse = await interact({
-//         function: "mint",
-//         prefix: "NFT",
-//         qty: "1",
-//     });
-//
-//     expectOk(mintResponse);
-//
-//     const tokenId = `NFT-${mintResponse.originalTxId}`;
-//
-//     {
-//         const { state } = (await contract.readState()).cachedValue;
-//         expect(state.tokens[tokenId].balances[op.address]).toBe("1");
-//     }
-//
-//     await interact({
-//         function: "burn",
-//         tokenId,
-//         qty: "1",
-//     });
-//
-//     {
-//         const { state } = (await contract.readState()).cachedValue;
-//         expect(state.tokens[tokenId]).toBeUndefined();
-//     }
-// });
-//
-// it("should burn some tokens", async () => {
-//     const tokenId = "PTY";
-//
-//     const mintResponse = await interact({
-//         function: "mint",
-//         baseId: tokenId,
-//         qty: "100",
-//     });
-//
-//     expectOk(mintResponse);
-//
-//     {
-//         const { state } = (await contract.readState()).cachedValue;
-//         expect(state.tokens[tokenId].balances[op.address]).toBe("100");
-//         expect(calculateTotalQty(state.tokens[tokenId])).toBe("100");
-//     }
-//
-//     await interact({
-//         function: "burn",
-//         tokenId,
-//         qty: "50",
-//     });
-//
-//     {
-//         const { state } = (await contract.readState()).cachedValue;
-//         expect(state.tokens[tokenId].balances[op.address]).toBe("50");
-//         expect(calculateTotalQty(state.tokens[tokenId])).toBe("50");
-//     }
-//
-//     await interact({
-//         function: "burn",
-//         tokenId,
-//         qty: "50",
-//     });
-//
-//     {
-//         const { state } = (await contract.readState()).cachedValue;
-//         expect(state.tokens[tokenId]).toBeUndefined();
-//     }
-// });
-//
-// it("should throw when non-op try to burn tokens", async () => {
-//     const burnInteraction = await interact(
-//         {
-//             function: "burn",
-//             tokenId: "DOL",
-//             qty: "1",
-//         },
-//         { wallet: user.jwk },
-//     );
-//
-//     expectError(burnInteraction, {
-//         kind: "UnauthorizedAddress",
-//         data: user.address,
-//     });
-// });
-//
+    expectOk(await interact({ function: "initialize" }));
+
+    const stateAfter = (await contract.readState()).cachedValue.state;
+    expect(stateAfter.initialState).toBeNull();
+});
+
+it("should get the default token", async () => {
+    const token = await view({ function: "getToken" });
+    expectOk(token);
+});
+
+it("fail if contract is already initialized", async () => {
+    const stateBefore = (await contract.readState()).cachedValue.state;
+    expect(stateBefore.initialState).toBeNull();
+
+    expectError(await interact({ function: "initialize" }), {
+        kind: "ContractAlreadyInitialized",
+    });
+});
+
+it("should not accept write interactions when paused", async () => {
+    expectOk(await interact({ function: "configure", paused: true }));
+
+    expectOk(await interact({ function: "balanceOf", target: "" }));
+
+    expectError(await interact({ function: "mint", qty: "1" }), {
+        kind: "ContractIsPaused",
+    });
+
+    expectOk(await interact({ function: "configure", paused: false }));
+});
+
+it("should transfer some tokens to user", async () => {
+    await interact({
+        function: "transfer",
+        target: user.address,
+        tokenId: "DOL",
+        qty: "100",
+    });
+
+    const opBalance = await view({ function: "balanceOf", target: op.address });
+    expectOk(opBalance);
+    expect(opBalance.result.balance).toBe("100");
+
+    const userBalance = await view({ function: "balanceOf", target: user.address });
+    expectOk(userBalance);
+    expect(userBalance.result.balance).toBe("100");
+});
+
+it("should mint an NFT", async () => {
+    const mintResponse = await interact({
+        function: "mint",
+        prefix: "NFT",
+        qty: "1",
+    });
+
+    expectOk(mintResponse);
+
+    const tokenId = `NFT-${mintResponse?.originalTxId}`;
+
+    const opBalance = await view({ function: "balanceOf", target: op.address, tokenId });
+    expectOk(opBalance);
+    expect(opBalance.result.balance).toBe("1");
+});
+
+it("should burn an NFT", async () => {
+    const mintResponse = await interact({
+        function: "mint",
+        prefix: "NFT",
+        qty: "1",
+    });
+
+    expectOk(mintResponse);
+
+    const tokenId = `NFT-${mintResponse.originalTxId}`;
+
+    {
+        const opBalance = await view({ function: "balanceOf", target: op.address, tokenId });
+        expectOk(opBalance);
+        expect(opBalance.result.balance).toBe("1");
+    }
+
+    await interact({
+        function: "burn",
+        tokenId,
+        qty: "1",
+    });
+
+    {
+        const token = await view({ function: "getToken", tokenId });
+        expectError(token, {
+            kind: "TokenNotFound",
+            data: tokenId,
+        });
+    }
+});
+
+it("should burn some tokens", async () => {
+    const tokenId = "PTY";
+
+    const mintResponse = await interact({
+        function: "mint",
+        baseId: tokenId,
+        qty: "100",
+    });
+
+    expectOk(mintResponse);
+
+    {
+        const token = await view({ function: "getToken", tokenId });
+        expectOk(token);
+        expect(token.result[1].balances[op.address]).toBe("100");
+        expect(calculateTotalQty(token.result[1])).toBe("100");
+    }
+
+    await interact({
+        function: "burn",
+        tokenId,
+        qty: "50",
+    });
+
+    {
+        const token = await view({ function: "getToken", tokenId });
+        expectOk(token);
+        expect(token.result[1].balances[op.address]).toBe("50");
+        expect(calculateTotalQty(token.result[1])).toBe("50");
+    }
+
+    await interact({
+        function: "burn",
+        tokenId,
+        qty: "50",
+    });
+
+    {
+        const token = await view({ function: "getToken", tokenId });
+        expectError(token, {
+            kind: "TokenNotFound",
+            data: tokenId,
+        });
+    }
+});
+
+it("should throw when non-op try to burn tokens", async () => {
+    const burnInteraction = await interact(
+        {
+            function: "burn",
+            tokenId: "DOL",
+            qty: "1",
+        },
+        { wallet: user.jwk },
+    );
+
+    expectError(burnInteraction, {
+        kind: "UnauthorizedAddress",
+        data: user.address,
+    });
+});
+
+// NOTE: Errors are not correctly stored with Pianity's Warp fork yet
 // it("publish an invalid interaction with strict:false and read the state", async () => {
 //     // This interaction is invalid because `mint` requires being an operator and `user` isn't
 //     const interaction = await interact(
@@ -343,17 +321,8 @@ it(
 //
 //     const state = (await contract.readState()).cachedValue;
 //
-//     expect(state.errors[interaction.originalTxId]).toEqual({
+//     expect(state.errorMessages[interaction.originalTxId]).toEqual({
 //         kind: "UnauthorizedAddress",
 //         data: user.address,
 //     });
 // });
-//
-// function calculateTotalQty(token: Token): string {
-//     return (
-//         Object.values(token.balances)
-//             // TODO: Use BigInt instead of parseInt
-//             .reduce((sum, balance) => sum + parseInt(balance), 0)
-//             .toString()
-//     );
-// }

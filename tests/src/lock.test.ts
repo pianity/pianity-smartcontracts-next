@@ -1,38 +1,48 @@
-import { it, expect, beforeAll, afterAll } from "@jest/globals";
+import { it, expect, beforeAll, afterAll } from "vitest";
 import Arlocal from "arlocal";
 import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 
-import { State as Erc1155State } from "erc1155/State";
+import { Parameters as Erc1155State } from "erc1155/State";
 import { ContractError as Erc1155Error } from "erc1155/ContractError";
 import { Action as Erc1155Action } from "erc1155/Action";
-import { State as LockState } from "lock/State";
-import { Action as LockAction } from "lock/Action";
-import { ContractError as LockError } from "lock/ContractError";
+import { ReadResponse as Erc1155ReadResponse } from "erc1155/ReadResponse";
+import * as Lock from "lock/index";
 
-import { UNIT, deployContract, createInteractor, Interactor } from "@/utils";
+import {
+    UNIT,
+    deployContract,
+    createInteractor,
+    Interactor,
+    Viewer,
+    createViewer,
+    generateWallet,
+    expectOk,
+    x,
+    expectError,
+} from "@/utils";
+import { DeployPlugin } from "warp-contracts-plugin-deploy";
+import BigNumber from "bignumber.js";
+import { PgSortKeyCache, PgSortKeyCacheOptions } from "warp-contracts-postgres";
 
 let arlocal: Arlocal;
 let warp: Warp;
 
 let op: Wallet;
 let user: Wallet;
+let bank: Wallet;
+let user2: Wallet;
 
-let erc1155Contract: Contract<Erc1155State, Erc1155Error>;
+let erc1155Contract: Contract<Erc1155State>;
 let erc1155TxId: string;
 let erc1155Interact: Interactor<Erc1155Action, Erc1155Error>;
+let erc1155View: Viewer<Erc1155Action, Erc1155ReadResponse, Erc1155State, Erc1155Error>;
 
-let lockContract: Contract<LockState, LockError>;
+let lockContract: Contract<Lock.Parameters>;
 let lockTxId: string;
-let lockInteract: Interactor<LockAction, LockError>;
+let lockInteract: Interactor<Lock.Action, Lock.ContractError>;
+let lockView: Viewer<Lock.Action, Lock.ReadResponse, Lock.Parameters, Lock.ContractError>;
 
-const nft1BaseId = "NFT-0";
-const nft1Id = `1-UNIQUE-${nft1BaseId}`;
-const nft2BaseId = "NFT-1";
-const nft2Id = `1-UNIQUE-${nft2BaseId}`;
-
-const nftPrice = 10 * UNIT;
-const nftRate = 0.1 * UNIT;
 const opBaseBalance = 100 * UNIT;
 const userBaseBalance = 100 * UNIT;
 
@@ -41,129 +51,450 @@ beforeAll(async () => {
     LoggerFactory.INST.logLevel("error", "WASM:Rust");
     LoggerFactory.INST.logLevel("error", "ContractHandler");
 
+    const cacheOpts = (tableName: string): PgSortKeyCacheOptions => ({
+        tableName,
+        host: "localhost",
+        port: 5432,
+        database: "warp",
+        user: "warp",
+        schemaName: "warpschema",
+        minEntriesPerKey: 1,
+        maxEntriesPerKey: 10000,
+    });
+
     arlocal = new Arlocal(1987, false, `./arlocal.lock.db`, false);
     await arlocal.start();
-    warp = WarpFactory.forLocal(1987, undefined, { inMemory: true, dbLocation: "/dev/null" });
-    op = await warp.testing.generateWallet();
-    user = await warp.testing.generateWallet();
+    warp = WarpFactory.forLocal(1987, undefined, { inMemory: true, dbLocation: "/dev/null" })
+        .use(new DeployPlugin())
+        .useKVStorageFactory((contractTxId) => new PgSortKeyCache(cacheOpts(contractTxId)));
+    op = await generateWallet();
+    user = await generateWallet();
+    user2 = await generateWallet();
+    bank = await generateWallet();
+
+    await warp.testing.addFunds(op.jwk);
+    await warp.testing.addFunds(user.jwk);
+    await warp.testing.addFunds(user2.jwk);
+    await warp.testing.addFunds(bank.jwk);
 
     const erc1155InitState: Erc1155State = {
         name: "TEST-ERC1155",
-        settings: {
-            superOperators: [op.address],
-            operators: [],
-            proxies: [],
-            allowFreeTransfer: true,
-            paused: false,
-        },
-        defaultToken: "DOL",
-        tickerNonce: 0,
-        tokens: {
-            DOL: {
-                ticker: "DOL",
-                balances: {
-                    [op.address]: `${opBaseBalance}`,
-                    [user.address]: `${userBaseBalance}`,
+        initialState: {
+            settings: {
+                superOperators: [op.address, bank.address],
+                operators: [],
+                proxies: [],
+                allowFreeTransfer: true,
+                paused: false,
+                defaultToken: "DOL",
+            },
+            tickerNonce: 0,
+            tokens: {
+                DOL: {
+                    ticker: "DOL",
+                    balances: {
+                        [op.address]: `${opBaseBalance}`,
+                        [user.address]: `${userBaseBalance}`,
+                        [user2.address]: "0",
+                        [bank.address]: "9999999999999999999",
+                        // [bank.address]: "100",
+                    },
+                },
+            },
+            approvals: {
+                [user.address]: {
+                    approves: { [op.address]: true },
                 },
             },
         },
-        approvals: {
-            [user.address]: {
-                [op.address]: true,
-            },
-        },
+        canEvolve: false,
     };
 
     erc1155TxId = (await deployContract(warp, op.jwk, "erc1155", erc1155InitState)).contractTxId;
     erc1155Contract = warp
-        .contract<Erc1155State, Erc1155Error>(erc1155TxId)
-        .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
+        .contract<Erc1155State>(erc1155TxId)
+        .setEvaluationOptions({
+            internalWrites: true,
+            throwOnInternalWriteError: false,
+            mineArLocalBlocks: false,
+        })
         .connect(op.jwk);
     erc1155Interact = createInteractor<Erc1155Action, Erc1155Error>(warp, erc1155Contract, op.jwk);
+    erc1155View = createViewer<Erc1155Action, Erc1155ReadResponse, Erc1155State, Erc1155Error>(
+        erc1155Contract,
+    );
 
-    const lockInitState: LockState = {
+    const lockInitState: Lock.Parameters = {
         name: "TEST-LOCK",
-        settings: {
-            superOperators: [op.address],
-            operators: [],
-            erc1155: erc1155TxId,
-            paused: false,
+        initialState: {
+            settings: {
+                superOperators: [op.address, bank.address, user2.address],
+                operators: [],
+                erc1155: erc1155TxId,
+                paused: false,
+            },
+            vault: {},
         },
-        vault: {},
+        canEvolve: false,
     };
 
     lockTxId = (await deployContract(warp, op.jwk, "lock", lockInitState)).contractTxId;
     lockContract = warp
-        .contract<LockState, LockError>(lockTxId)
-        .setEvaluationOptions({ internalWrites: true, throwOnInternalWriteError: false })
+        .contract<Lock.Parameters>(lockTxId)
+        .setEvaluationOptions({
+            internalWrites: true,
+            throwOnInternalWriteError: false,
+            mineArLocalBlocks: false,
+        })
         .connect(op.jwk);
-    lockInteract = createInteractor<LockAction, LockError>(warp, lockContract, op.jwk);
+    lockInteract = createInteractor<Lock.Action, Lock.ContractError>(warp, lockContract, op.jwk);
+    lockView = createViewer<Lock.Action, Lock.ReadResponse, Lock.Parameters, Lock.ContractError>(
+        lockContract,
+    );
 
     console.log(
-        `OP: ${op.address}\nUSER: ${user.address}\nLOCK: ${lockTxId}\nERC1155: ${erc1155TxId}`,
+        `OP: ${op.address}`,
+        `\nUSER: ${user.address}`,
+        `\nUSER2: ${user2.address}`,
+        `\nBANK: ${bank.address}`,
+        `\nLOCK: ${lockTxId}`,
+        `\nERC1155: ${erc1155TxId}`,
     );
-}, 20_000);
+}, 40_000);
 
 afterAll(async () => {
     await arlocal.stop();
 });
 
-it("should do stuff", async () => {
-    await erc1155Interact(
-        {
-            function: "setApprovalForAll",
-            approved: true,
-            operator: lockTxId,
-        },
-        { wallet: user.jwk },
-    );
+it("initialize Erc1155", async () => {
+    const stateBefore = (await erc1155Contract.readState()).cachedValue.state;
+    expect(stateBefore.initialState).toBeTruthy();
 
-    await lockInteract(
-        {
-            function: "transferLocked",
-            tokenId: "DOL",
-            duration: 2,
-            qty: `${100 * UNIT}`,
-            to: op.address,
-        },
-        // { wallet: user.jwk },
-    );
+    expectOk(await erc1155Interact({ function: "initialize" }));
 
-    await warp.testing.mineBlock();
-    await warp.testing.mineBlock();
-
-    {
-        const { state } = (await erc1155Contract.readState()).cachedValue;
-        console.log(JSON.stringify(state, null, 2));
-    }
-    {
-        const { state } = (await lockContract.readState()).cachedValue;
-        console.log(JSON.stringify(state, null, 2));
-    }
-
-    await lockInteract(
-        {
-            function: "unlock",
-        },
-        { wallet: user.jwk },
-    );
-
-    {
-        const { state } = (await erc1155Contract.readState()).cachedValue;
-        console.log(JSON.stringify(state, null, 2));
-    }
-    {
-        const { state } = (await lockContract.readState()).cachedValue;
-        console.log(JSON.stringify(state, null, 2));
-    }
+    const stateAfter = (await erc1155Contract.readState()).cachedValue.state;
+    expect(stateAfter.initialState).toBeNull();
 });
 
-// it("should activate the lock contract on the Erc1155 one", async () => {
-//     await erc1155Interact({
-//         function: "configure",
-//         proxies: [lockTxId],
-//     });
-//
-//     const { state } = (await erc1155Contract.readState()).cachedValue;
-//     expect(state.settings.proxies).toEqual([lockTxId]);
-// });
+it("initialize Lock", async () => {
+    const stateBefore = (await lockContract.readState()).cachedValue.state;
+    expect(stateBefore.initialState).toBeTruthy();
+
+    expectOk(await lockInteract({ function: "initialize" }));
+
+    const stateAfter = (await lockContract.readState()).cachedValue.state;
+    expect(stateAfter.initialState).toBeNull();
+});
+
+it("configure Lock as proxy of Erc1155", async () => {
+    const settings = await erc1155View({ function: "readSettings" });
+    expectOk(settings);
+
+    expectOk(
+        await erc1155Interact({
+            function: "configure",
+            proxies: [...settings.result.proxies, lockTxId],
+            superOperators: [...settings.result.superOperators, lockTxId],
+        }),
+    );
+});
+
+it("correctly set balance to 0 after emptying it using erc1155 directly", async () => {
+    const tokenId = "DOL";
+    const qty = "10";
+
+    expectOk(
+        await erc1155Interact(
+            {
+                function: "transfer",
+                target: user2.address,
+                tokenId,
+                qty,
+            },
+            { wallet: bank.jwk },
+        ),
+    );
+
+    const balance = await erc1155View({ function: "balanceOf", target: user2.address, tokenId });
+    expectOk(balance);
+    expect(balance.result.balance).toBe(qty);
+
+    expectOk(
+        await erc1155Interact(
+            { function: "transfer", target: bank.address, tokenId, qty },
+            { wallet: user2.jwk },
+        ),
+    );
+
+    const balanceAfter = await erc1155View({
+        function: "balanceOf",
+        target: user2.address,
+        tokenId,
+    });
+    expectOk(balanceAfter);
+    expect(balanceAfter.result.balance).toBe("0");
+});
+
+it("correctly set balance to 0 after emptying it using proxyTransfer on the Lock contract", async () => {
+    const tokenId = "DOL";
+    const qty = "10";
+
+    expectOk(
+        await lockInteract(
+            {
+                function: "proxyTransfer",
+                asDirectCaller: false,
+                target: lockTxId,
+                tokenId: "DOL",
+                qty,
+            },
+            { wallet: bank.jwk },
+        ),
+    );
+
+    const allBalances = await erc1155View({ function: "getToken", tokenId });
+    expectOk(allBalances);
+    const user2Balance = await erc1155View({
+        function: "balanceOf",
+        target: user2.address,
+        tokenId,
+    });
+    expectOk(user2Balance);
+
+    console.log(
+        "aaaaaaaaaaaaaaa user2 balance:",
+        allBalances.result[1].balances[user2.address],
+        user2Balance.result.balance,
+    );
+
+    const balance = await erc1155View({ function: "balanceOf", target: lockTxId, tokenId });
+    expectOk(balance);
+    expect(balance.result.balance).toBe(qty);
+
+    expectOk(
+        await lockInteract({
+            function: "proxyTransfer",
+            asDirectCaller: true,
+            target: bank.address,
+            tokenId,
+            qty,
+        }),
+    );
+
+    const balanceAfter = await erc1155View({
+        function: "balanceOf",
+        target: lockTxId,
+        tokenId,
+    });
+    expectOk(balanceAfter);
+    expect(balanceAfter.result.balance).toBe("0");
+});
+
+it("should execute a cliff transferLock correctly", async () => {
+    const target = user2.address;
+    const tokenId = "DOL";
+    const qty = "10";
+
+    const interaction = await lockInteract(
+        {
+            function: "transferLocked",
+            tokenId,
+            target,
+            duration: 2,
+            qty,
+            method: "cliff",
+        },
+        { wallet: bank.jwk },
+    );
+    expectOk(interaction);
+
+    console.log(
+        "lock's balanceOf result:",
+        await erc1155View({
+            function: "balanceOf",
+            target: lockTxId,
+        }),
+    );
+
+    console.log(
+        "user2's balanceOf result:",
+        await erc1155View({
+            function: "balanceOf",
+            target,
+        }),
+    );
+
+    // We mine enough blocks for the transferLock to be completed
+
+    await warp.testing.mineBlock();
+    await warp.testing.mineBlock();
+    await warp.testing.mineBlock();
+
+    expectOk(await lockInteract({ function: "unlock" }));
+    expectOk(await lockInteract({ function: "unlock" }));
+    expectOk(await lockInteract({ function: "unlock" }));
+
+    // NOTE: `proxyTransfer` is a debug function added to the Lock contract in order to demonstrate
+    // the bug. Here we try to transfer tokens from the Lock contract to the user, which should
+    // fail because the contract's balance should be 0, which in this case it is, even if the above
+    // log shows otherwise.
+    const incorrectTransfer = await lockInteract({
+        function: "proxyTransfer",
+        asDirectCaller: true,
+        target,
+        tokenId,
+        qty,
+    });
+    expectError(incorrectTransfer);
+
+    {
+        const balances = await erc1155View({
+            function: "getToken",
+            tokenId,
+        });
+        expectOk(balances);
+        expect(balances.result[1].balances[target]).toEqual(qty);
+        const contractBalance = balances.result[1].balances[lockTxId];
+        expect(contractBalance).toBeUndefined();
+    }
+}, 60_000);
+
+function transferToVault(
+    input: Lock.Actions["transferLocked"],
+    {
+        startedAt,
+        currentBlock,
+        from,
+    }: {
+        startedAt: number;
+        currentBlock: number;
+        from: string;
+    },
+): Lock.LockedBalance {
+    if (input.method === "cliff") {
+        const value: Lock.LockedBalance = {
+            type: "cliff",
+            at: startedAt,
+            duration: input.duration,
+            qty: input.qty,
+            from,
+            tokenId: "DOL",
+        };
+
+        return value;
+    } else {
+        const value: Lock.LockedBalance = {
+            type: "linear",
+            at: startedAt,
+            duration: input.duration,
+            qty: input.qty,
+            from,
+            tokenId: "DOL",
+            unlocked: BigNumber(input.qty)
+                .times((currentBlock - startedAt) / input.duration)
+                .decimalPlaces(7, BigNumber.ROUND_HALF_UP)
+                .decimalPlaces(0, BigNumber.ROUND_DOWN)
+                .toFixed(),
+        };
+
+        return value;
+    }
+}
+
+it(
+    "fuzzy test locks",
+    async () => {
+        const target = "fuzz-test-receiver";
+        const tokenId = "DOL";
+
+        {
+            const balance = await erc1155View({
+                function: "balanceOf",
+                target,
+                tokenId,
+            });
+            expectOk(balance);
+            expect(balance.result.balance).toEqual("0");
+
+            const vault = await lockView({ function: "getVault", owner: target });
+            expectError(vault, { kind: "OwnerHasNoVault", data: target });
+        }
+
+        await lockInteract({ function: "unlock" });
+
+        let totalUnlocked = "0";
+
+        for (let i = 0; i < 50; i++) {
+            const duration = Math.floor(Math.random() * 10) + 1;
+            const qty = Math.floor(Math.random() * 1000).toFixed();
+            const method = i % 2 === 0 ? "cliff" : "linear";
+
+            const input: Lock.Actions["transferLocked"] = {
+                function: "transferLocked",
+                tokenId,
+                target,
+                duration,
+                qty,
+                method,
+            };
+            const interaction = await lockInteract(input, { wallet: bank.jwk });
+            expectOk(interaction);
+
+            const startedAt = (await warp.arweave.network.getInfo()).height;
+
+            for (let block = 0; block < duration; block++) {
+                const height = (await warp.arweave.network.getInfo()).height;
+                console.log(`=============== ITERATION ${block} (${height}) ===============`);
+                console.log(`startedAt: ${startedAt}; block: ${block}; duration: ${duration}`);
+
+                console.log(">>>>>>>>>>>>>>> startedAt + block", startedAt + block);
+                console.log(
+                    ">>>>>>>>>>>>>>> actual height",
+                    (await warp.arweave.network.getInfo()).height,
+                );
+
+                const vault = await lockView({ function: "getVault", owner: target });
+                expectOk(vault);
+                expect(vault.result[1]).toHaveLength(1);
+                const expectedVault = transferToVault(input, {
+                    startedAt,
+                    currentBlock: startedAt + block,
+                    from: bank.address,
+                });
+                expect(vault.result[1][0]).toEqual(expectedVault);
+
+                const balance = await erc1155View({
+                    function: "balanceOf",
+                    target,
+                    tokenId,
+                });
+                expectOk(balance);
+                const expectedBalance =
+                    expectedVault.type === "cliff"
+                        ? totalUnlocked
+                        : BigNumber(totalUnlocked).plus(expectedVault.unlocked).toFixed();
+                expect(balance.result.balance).toEqual(expectedBalance);
+
+                expectOk(await lockInteract({ function: "unlock" }));
+            }
+
+            expectOk(await lockInteract({ function: "unlock" }));
+
+            totalUnlocked = BigNumber(totalUnlocked).plus(qty).toFixed();
+
+            {
+                const balance = await erc1155View({
+                    function: "getToken",
+                    tokenId,
+                });
+                expectOk(balance);
+                expect(balance.result[1].balances[target]).toEqual(totalUnlocked);
+                expect(balance.result[1].balances[lockTxId]).toBeUndefined();
+
+                const vault = await lockView({ function: "getVault", owner: target });
+                expectError(vault, { kind: "OwnerHasNoVault", data: target });
+            }
+        }
+    },
+    20 * 60_000,
+);

@@ -11,16 +11,10 @@ import { Parameters as ScarcityState } from "scarcity/State";
 import { Action as ScarcityAction } from "scarcity/Action";
 import { ContractError as ScarcityError } from "scarcity/ContractError";
 import { ReadResponse as ScarcityReadResponse } from "scarcity/ReadResponse";
-// import { State as ShuffleState } from "shuffle/State";
-// import { Action as ShuffleAction } from "shuffle/Action";
-// import { ContractError as ShuffleError } from "shuffle/ContractError";
 
 import {
-    // UNIT,
     deployContract,
     createInteractor,
-    // expectOk,
-    // expectError,
     Interactor,
     generateWallet,
     Viewer,
@@ -37,16 +31,12 @@ let warp: Warp;
 
 let op: Wallet;
 let user: Wallet;
-// let shuffleBuyer: Wallet;
+let bank: Wallet;
 
 let erc1155Contract: Contract<Erc1155State>;
 let erc1155TxId: string;
 let erc1155Interact: Interactor<Erc1155Action, Erc1155Error>;
 let erc1155View: Viewer<Erc1155Action, Erc1155ReadResponse, Erc1155State, Erc1155Error>;
-
-// let shuffleContract: Contract<ShuffleState, ShuffleError>;
-// let shuffleTxId: string;
-// let shuffleInteract: Interactor<ShuffleAction, ShuffleError>;
 
 let scarcityContract: Contract<ScarcityState>;
 let scarcityTxId: string;
@@ -68,19 +58,18 @@ beforeAll(async () => {
     LoggerFactory.INST.logLevel("debug", "WASM:Rust");
     // LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
-    arlocal = new Arlocal(1985, false, `./arlocal.scarcity.db`, false);
+    arlocal = new Arlocal(1986, false, `./arlocal.scarcity.db`, false);
     await arlocal.start();
-    warp = WarpFactory.forLocal(1985, undefined, { inMemory: true, dbLocation: "/dev/null" }).use(
+    warp = WarpFactory.forLocal(1986, undefined, { inMemory: true, dbLocation: "/dev/null" }).use(
         new DeployPlugin(),
     );
     op = await generateWallet();
     user = await generateWallet();
-    // TODO: Should use `user` instead and fix the tests to correctly deduce user's balance from
-    // erc1155's state when doing transfers
-    // shuffleBuyer = await generateWallet();
+    bank = await generateWallet();
 
     await warp.testing.addFunds(op.jwk);
     await warp.testing.addFunds(user.jwk);
+    await warp.testing.addFunds(bank.jwk);
 
     const erc1155InitState: Erc1155State = {
         name: "TEST-ERC1155",
@@ -88,12 +77,11 @@ beforeAll(async () => {
         initialState: {
             settings: {
                 defaultToken: "DOL",
-                superOperators: [op.address],
+                superOperators: [op.address, bank.address],
                 operators: [],
                 proxies: [],
                 allowFreeTransfer: true,
                 paused: false,
-                canEvolve: false,
             },
             tickerNonce: 0,
             tokens: {
@@ -102,6 +90,7 @@ beforeAll(async () => {
                     balances: {
                         [op.address]: `${opBaseBalance}`,
                         [user.address]: `${userBaseBalance}`,
+                        [bank.address]: `9999999999999999999`,
                         // [shuffleBuyer.address]: `${100 * UNIT}`,
                     },
                 },
@@ -124,12 +113,10 @@ beforeAll(async () => {
                         [op.address]: true,
                     },
                 },
-                // [shuffleBuyer.address]: {
-                //     [op.address]: true,
-                // },
             },
         },
     };
+
     erc1155TxId = (await deployContract(warp, op.jwk, "erc1155", erc1155InitState)).contractTxId;
     erc1155Contract = warp
         .contract<Erc1155State>(erc1155TxId)
@@ -139,33 +126,6 @@ beforeAll(async () => {
     erc1155View = createViewer<Erc1155Action, Erc1155ReadResponse, Erc1155State, Erc1155Error>(
         erc1155Contract,
     );
-
-    // const shuffleInitState: ShuffleState = {
-    //     name: "TEST-SHUFFLES",
-    //     settings: {
-    //         superOperators: [op.address],
-    //         operators: [],
-    //         erc1155: erc1155TxId,
-    //         custodian: op.address,
-    //         boostCap: 1,
-    //         boostPriceModifier: 1,
-    //         boostToken: "DOL",
-    //         paused: false,
-    //     },
-    //     shuffles: {},
-    // };
-    // shuffleTxId = (await deployContract(warp, op.jwk, "shuffle", shuffleInitState)).contractTxId;
-    // shuffleContract = warp
-    //     .contract<ShuffleState, ShuffleError>(shuffleTxId)
-    //     .setEvaluationOptions({
-    //         internalWrites: true,
-    //         throwOnInternalWriteError: false,
-    //         ignoreExceptions: false,
-    //     })
-    //     .connect(op.jwk);
-    // shuffleInteract = createInteractor<ShuffleAction, ShuffleError>(warp, shuffleContract, op.jwk, {
-    //     vrf: true,
-    // });
 
     const scarcityInitState: ScarcityState = {
         name: "TEST-SCARCITY",
@@ -207,7 +167,7 @@ beforeAll(async () => {
         "\nSCARCITY:",
         scarcityTxId,
     );
-}, 25_000);
+}, 40_000);
 
 afterAll(async () => {
     await arlocal.stop();
@@ -272,6 +232,71 @@ it("activate the Scarcity contract as a proxy of Erc1155", async () => {
     // expect(state.settings.proxies).toEqual([scarcityTxId, shuffleTxId]);
 });
 
+it("proxy transfer should transfer simple tokens successfully", async () => {
+    expectOk(
+        await scarcityInteract({
+            function: "proxyTransfer",
+            from: bank.address,
+            target: "test-proxy-transfer",
+            tokenId: "DOL",
+            qty: "123",
+        }),
+    );
+
+    const balance = await erc1155View({
+        function: "balanceOf",
+        target: "test-proxy-transfer",
+        tokenId: "DOL",
+    });
+
+    expectOk(balance);
+    expect(balance.result.balance).toEqual("123");
+});
+
+it("proxy transfer should fail on nfts", async () => {
+    expectError(
+        await scarcityInteract({
+            function: "proxyTransfer",
+            from: op.address,
+            target: "test-proxy-transfer",
+            tokenId: nft1Id,
+            qty: "123",
+        }),
+        { kind: "CantUseProxyTransferForNft", data: nft1Id },
+    );
+});
+
+it("proxy transfer should fail if token has royalties", async () => {
+    expectOk(
+        await scarcityInteract({
+            function: "attachRoyalties",
+            baseId: "DOL",
+            rate: 1_000_000,
+            royalties: {
+                [bank.address]: 1_000_000,
+            },
+        }),
+    );
+
+    expectError(
+        await scarcityInteract({
+            function: "proxyTransfer",
+            from: op.address,
+            target: "test-proxy-transfer",
+            tokenId: "DOL",
+            qty: "123",
+        }),
+        { kind: "CantUseProxyTransferOnTokenWithRoyalties", data: "DOL" },
+    );
+
+    expectOk(
+        await scarcityInteract({
+            function: "removeAttachedRoyalties",
+            baseId: "DOL",
+        }),
+    );
+});
+
 it("mint a free NFT and distribute it to a unknown address", async () => {
     const nftBaseId = "PANTERA";
     const nftId = `1-UNIQUE-${nftBaseId}`;
@@ -291,7 +316,7 @@ it("mint a free NFT and distribute it to a unknown address", async () => {
         await scarcityInteract({
             function: "transfer",
             from: op.address,
-            to: unknownAddress,
+            target: unknownAddress,
             tokenId: nftId,
             price: "0",
         }),
@@ -325,9 +350,9 @@ it("attach fees to an NFT", async () => {
 
     expectOk(await scarcityInteract(params));
 
-    const royalties = await scarcityView({ function: "getAttachedRoylaties", baseId: nft1BaseId });
+    const royalties = await scarcityView({ function: "getRoyalties", baseId: nft1BaseId });
     expectOk(royalties);
-    expect(royalties.result).toEqual(fees);
+    expect(royalties.result[1]).toEqual(fees);
 });
 
 it("return correct error type on bad tranfer", async () => {
@@ -335,7 +360,7 @@ it("return correct error type on bad tranfer", async () => {
         function: "transfer",
         tokenId: nft1Id,
         from: op.address,
-        to: user.address,
+        target: user.address,
         price: `${opBaseBalance + UNIT}`,
     });
 
@@ -356,7 +381,7 @@ it("op should sell the NFT and pay the shareholders", async () => {
         await scarcityInteract({
             function: "transfer",
             from: op.address,
-            to: user.address,
+            target: user.address,
             tokenId: nft1Id,
             price: `${nftPrice}`,
         }),
@@ -402,7 +427,7 @@ it("mint nft", async () => {
     const nftBaseId = interaction.originalTxId;
 
     const attachedRoyalties = await scarcityView({
-        function: "getAttachedRoylaties",
+        function: "getRoyalties",
         baseId: nftBaseId,
     });
     expectOk(attachedRoyalties);
@@ -433,7 +458,7 @@ it("mint nft", async () => {
     expectError(nft);
 
     // expect(erc1155State.tokens[`11-LEGENDARY-${nftBaseId}`]).toBeUndefined();
-});
+}, 10_000);
 
 it("should mint with a custom baseId", async () => {
     const ticker = "CUSTOM_TICKER";
@@ -449,12 +474,12 @@ it("should mint with a custom baseId", async () => {
     });
 
     const attachedRoyalties = await scarcityView({
-        function: "getAttachedRoylaties",
+        function: "getRoyalties",
         baseId: ticker,
     });
 
     expectOk(attachedRoyalties);
-    expect(attachedRoyalties.result.baseId).toBe(ticker);
+    expect(attachedRoyalties.result[0]).toBe(ticker);
 
     // const { state: scarcityState } = (await scarcityContract.readState()).cachedValue;
     // expect(scarcityState.allAttachedRoyalties[ticker]).toBeDefined();
@@ -472,7 +497,7 @@ it("should mint with a custom baseId", async () => {
     }
 
     expectError(await erc1155View({ function: "getToken", tokenId: `11-LEGENDARY-${ticker}` }));
-});
+}, 10_000);
 
-// TODO: Test the case where user buys an NFT that doesn't have an edition count of 1, 10, 100 or
-// 1000. (there is an NFT with 50 editions in the old contract).
+// // TODO: Test the case where user buys an NFT that doesn't have an edition count of 1, 10, 100 or
+// // 1000. (there is an NFT with 50 editions in the old contract).
