@@ -55,6 +55,10 @@ impl AsyncActionable for Configure {
             State::settings().erc1155().set(&erc1155).await;
         }
 
-        return Ok(HandlerResult::None(state));
+        if let Some(_) = self.can_evolve {
+            Ok(HandlerResult::Write(state))
+        } else {
+            Ok(HandlerResult::None(state))
+        }
     }
 }
