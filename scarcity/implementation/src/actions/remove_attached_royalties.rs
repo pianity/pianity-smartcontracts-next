@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use warp_scarcity::{
-    action::{ActionResult, AttachRoyalties, HandlerResult, RemoveAttachedRoyalties},
+    action::{ActionResult, HandlerResult, RemoveAttachedRoyalties},
     error::ContractError,
     state::Parameters,
 };
 
 use crate::{
-    actions::{attach_royalties_internal, AsyncActionable},
+    actions::{AsyncActionable},
     contract_utils::foreign_call::ForeignContractCaller,
     state::State,
 };

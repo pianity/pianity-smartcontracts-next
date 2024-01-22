@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use warp_erc1155::{action::Transfer as Erc1155Transfer, state::Balance};
+use warp_erc1155::{state::Balance};
 
 use crate::error::ContractError;
 use crate::state::{AttachedRoyalties, Parameters, Royalties};

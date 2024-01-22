@@ -6,10 +6,6 @@ use kv_storage::{kv, KvStorage};
 
 use crate::contract_utils::js_imports::Kv;
 
-// TODO: Find a way to export `UNIT` via schemars or put it in `Settings`.
-/// The exact amount that all the sum of all the royalties of a token must be equal to.
-pub const UNIT: u32 = 1_000_000;
-
 /**
  * address -> share
  */

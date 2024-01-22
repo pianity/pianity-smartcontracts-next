@@ -14,11 +14,7 @@ use crate::{
 };
 
 pub fn is_action_read(action: &Action) -> bool {
-    match action {
-        Action::GetRoyalties(_) => true,
-        Action::GetAllRoyalties(_) => true,
-        _ => false,
-    }
+    matches!(action, Action::GetRoyalties(_) | Action::GetAllRoyalties(_))
 }
 
 pub fn allowed_in_pause(action: &Action) -> bool {

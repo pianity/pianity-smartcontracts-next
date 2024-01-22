@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 use serde::{de::DeserializeOwned, Deserialize};
-use wasm_bindgen::JsValue;
 
 use warp_scarcity::error::{ForeignReadError, ForeignWriteError};
 
@@ -42,6 +41,12 @@ pub struct ForeignContractCaller {
     states: HashMap<String, ForeignContractState>,
 }
 
+impl Default for ForeignContractCaller {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ForeignContractCaller {
     pub fn new() -> Self {
         Self {
@@ -54,10 +59,10 @@ impl ForeignContractCaller {
         contract_address: &String,
     ) -> Result<&ForeignContractState, ForeignReadError> {
         if !self.states.contains_key(contract_address) {
-            let state = SmartWeave::read_contract_state(contract_address)
-                .await
-                .into_serde()
-                .map_err(|_err| ForeignReadError::ParseError)?;
+            let state = serde_wasm_bindgen::from_value(
+                SmartWeave::read_contract_state(contract_address).await,
+            )
+            .map_err(|_err| ForeignReadError::ParseError)?;
 
             self.states.insert(contract_address.to_string(), state);
         }
@@ -70,11 +75,12 @@ impl ForeignContractCaller {
         contract_address: &String,
         input: INPUT,
     ) -> Result<&ForeignContractState, ForeignWriteError<ERROR>> {
-        let input = JsValue::from_serde(&input).unwrap();
+        // let input = JsValue::jfrom_serde(&input).unwrap();
+        let input = serde_wasm_bindgen::to_value(&input).unwrap();
 
-        let result = SmartWeave::write(contract_address, input)
-            .await
-            .into_serde::<ForeignCallResult<ERROR>>();
+        let result = serde_wasm_bindgen::from_value::<ForeignCallResult<ERROR>>(
+            SmartWeave::write(contract_address, input).await,
+        );
 
         let result = result.map_err(|_err| ForeignWriteError::ParseError)?;
 

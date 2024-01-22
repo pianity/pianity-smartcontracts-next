@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use warp_erc1155::{
-    action::{self as Erc1155Action, Batch},
+    action::{self as Erc1155Action},
     error::ContractError as Erc1155ContractError,
     state::{Balance, BalancePrecision},
 };
@@ -106,7 +106,7 @@ impl AsyncActionable for Transfer {
 
         let transfers = transfers
             .into_iter()
-            .map(|transfer| Erc1155Action::Action::Transfer(transfer))
+            .map(Erc1155Action::Action::Transfer)
             .collect();
 
         foreign_caller
@@ -114,8 +114,7 @@ impl AsyncActionable for Transfer {
                 &State::settings().erc1155().get().await,
                 Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
             )
-            .await
-            .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+            .await.map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::Write(state))
     }

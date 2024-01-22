@@ -83,8 +83,8 @@ pub async fn handle(interaction: JsValue) -> Option<JsValue> {
 }
 
 #[wasm_bindgen(js_name = initState)]
-pub fn init_state(state: &JsValue) {
-    let state_parsed: Parameters = state.into_serde().unwrap();
+pub fn init_state(state: JsValue) {
+    let state_parsed: Parameters = serde_wasm_bindgen::from_value(state).unwrap();
 
     STATE.with(|service| service.replace(state_parsed));
 }
@@ -96,12 +96,12 @@ pub fn current_state() -> JsValue {
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
     let current_state = STATE.with(|service| service.borrow().clone());
-    JsValue::from_serde(&current_state).unwrap()
+    serde_wasm_bindgen::to_value(&current_state).unwrap()
 }
 
 #[wasm_bindgen()]
 pub fn version() -> i32 {
-    return 1;
+    1
 }
 
 // Workaround for now to simplify type reading without as/loader or wasm-bindgen
@@ -112,5 +112,5 @@ pub fn version() -> i32 {
 // 5 = c
 #[wasm_bindgen]
 pub fn lang() -> i32 {
-    return 2;
+    2
 }

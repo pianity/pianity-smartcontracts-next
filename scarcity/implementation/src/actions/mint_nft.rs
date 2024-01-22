@@ -7,7 +7,7 @@ use warp_erc1155::{
 };
 
 use warp_scarcity::{
-    action::{ActionResult, AttachRoyalties, HandlerResult, MintNft, Scarcity},
+    action::{ActionResult, AttachRoyalties, HandlerResult, MintNft},
     error::ContractError,
     state::Parameters,
 };
@@ -56,8 +56,7 @@ impl AsyncActionable for MintNft {
                 &State::settings().erc1155().get().await,
                 transaction_batch,
             )
-            .await
-            .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+            .await.map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::None(state))
     }

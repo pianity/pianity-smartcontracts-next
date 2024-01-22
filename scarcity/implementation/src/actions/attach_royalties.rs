@@ -6,11 +6,10 @@ use warp_scarcity::{
 };
 
 use crate::{
+    actions::AsyncActionable,
     contract_utils::foreign_call::ForeignContractCaller,
     state::{AttachedRoyalties, State},
 };
-
-use super::AsyncActionable;
 
 pub async fn attach_royalties_internal(
     attach_royalties: &AttachRoyalties,
@@ -22,8 +21,8 @@ pub async fn attach_royalties_internal(
     // Check that the sum of all royalties is equal to UNIT
     let royalties_sum = attach_royalties
         .royalties
-        .iter()
-        .map(|(_, royalty)| *royalty)
+        .values()
+        .copied()
         .reduce(|sum, royalty| sum + royalty)
         .unwrap_or(0);
 

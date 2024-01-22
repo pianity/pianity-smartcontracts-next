@@ -8,8 +8,6 @@ pub async fn is_op(address: &str) -> bool {
         .get()
         .await
         .contains(&address.into())
-    // true
-    // is_super_op(state, address) || state.settings.operators.contains(&address.into())
 }
 
 pub async fn is_super_op(address: &str) -> bool {
@@ -18,7 +16,6 @@ pub async fn is_super_op(address: &str) -> bool {
         .get()
         .await
         .contains(&address.into())
-    // state.settings.super_operators.contains(&address.into())
 }
 
 // TODO: This code is mostly duplicated from the Shuffle contract. It should be refactored to be
@@ -41,9 +38,9 @@ impl ToString for NftId {
 }
 
 pub enum NftIdParseError {
-    InvalidScarcity,
-    InvalidEdition,
-    InvalidShape,
+    Scarcity,
+    Edition,
+    Shape,
 }
 
 impl TryFrom<&str> for NftId {
@@ -54,21 +51,20 @@ impl TryFrom<&str> for NftId {
             let mut splited = id.splitn(3, '-');
 
             (
-                splited.next().ok_or(NftIdParseError::InvalidShape)?,
-                splited.next().ok_or(NftIdParseError::InvalidShape)?,
-                splited.next().ok_or(NftIdParseError::InvalidShape)?,
+                splited.next().ok_or(NftIdParseError::Shape)?,
+                splited.next().ok_or(NftIdParseError::Shape)?,
+                splited.next().ok_or(NftIdParseError::Shape)?,
             )
         };
 
-        let scarcity =
-            Scarcity::try_from(splited.1).map_err(|_| NftIdParseError::InvalidScarcity)?;
+        let scarcity = Scarcity::try_from(splited.1).map_err(|_| NftIdParseError::Scarcity)?;
         let edition = splited
             .0
             .parse::<u32>()
-            .map_err(|_| NftIdParseError::InvalidEdition)?;
+            .map_err(|_| NftIdParseError::Edition)?;
 
         if edition > u32::from(&scarcity) {
-            Err(NftIdParseError::InvalidEdition)
+            Err(NftIdParseError::Edition)
         } else {
             Ok(Self {
                 base_id: splited.2.to_string(),
@@ -93,7 +89,7 @@ impl TryFrom<&str> for ShuffleId {
     type Error = ();
 
     fn try_from(id: &str) -> Result<Self, Self::Error> {
-        let shuffle_split = id.splitn(2, "-").collect::<Vec<&str>>();
+        let shuffle_split = id.splitn(2, '-').collect::<Vec<&str>>();
 
         if shuffle_split.len() == 2 && shuffle_split[0] == "SHUFFLE" {
             Ok(Self {
