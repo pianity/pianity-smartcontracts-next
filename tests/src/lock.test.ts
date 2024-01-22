@@ -235,61 +235,6 @@ it("correctly set balance to 0 after emptying it using erc1155 directly", async 
     expect(balanceAfter.result.balance).toBe("0");
 });
 
-it("correctly set balance to 0 after emptying it using proxyTransfer on the Lock contract", async () => {
-    const tokenId = "DOL";
-    const qty = "10";
-
-    expectOk(
-        await lockInteract(
-            {
-                function: "proxyTransfer",
-                asDirectCaller: false,
-                target: lockTxId,
-                tokenId: "DOL",
-                qty,
-            },
-            { wallet: bank.jwk },
-        ),
-    );
-
-    const allBalances = await erc1155View({ function: "getToken", tokenId });
-    expectOk(allBalances);
-    const user2Balance = await erc1155View({
-        function: "balanceOf",
-        target: user2.address,
-        tokenId,
-    });
-    expectOk(user2Balance);
-
-    console.log(
-        "aaaaaaaaaaaaaaa user2 balance:",
-        allBalances.result[1].balances[user2.address],
-        user2Balance.result.balance,
-    );
-
-    const balance = await erc1155View({ function: "balanceOf", target: lockTxId, tokenId });
-    expectOk(balance);
-    expect(balance.result.balance).toBe(qty);
-
-    expectOk(
-        await lockInteract({
-            function: "proxyTransfer",
-            asDirectCaller: true,
-            target: bank.address,
-            tokenId,
-            qty,
-        }),
-    );
-
-    const balanceAfter = await erc1155View({
-        function: "balanceOf",
-        target: lockTxId,
-        tokenId,
-    });
-    expectOk(balanceAfter);
-    expect(balanceAfter.result.balance).toBe("0");
-});
-
 it("should execute a cliff transferLock correctly", async () => {
     const target = user2.address;
     const tokenId = "DOL";
@@ -308,44 +253,10 @@ it("should execute a cliff transferLock correctly", async () => {
     );
     expectOk(interaction);
 
-    console.log(
-        "lock's balanceOf result:",
-        await erc1155View({
-            function: "balanceOf",
-            target: lockTxId,
-        }),
-    );
-
-    console.log(
-        "user2's balanceOf result:",
-        await erc1155View({
-            function: "balanceOf",
-            target,
-        }),
-    );
-
-    // We mine enough blocks for the transferLock to be completed
-
-    await warp.testing.mineBlock();
     await warp.testing.mineBlock();
     await warp.testing.mineBlock();
 
     expectOk(await lockInteract({ function: "unlock" }));
-    expectOk(await lockInteract({ function: "unlock" }));
-    expectOk(await lockInteract({ function: "unlock" }));
-
-    // NOTE: `proxyTransfer` is a debug function added to the Lock contract in order to demonstrate
-    // the bug. Here we try to transfer tokens from the Lock contract to the user, which should
-    // fail because the contract's balance should be 0, which in this case it is, even if the above
-    // log shows otherwise.
-    const incorrectTransfer = await lockInteract({
-        function: "proxyTransfer",
-        asDirectCaller: true,
-        target,
-        tokenId,
-        qty,
-    });
-    expectError(incorrectTransfer);
 
     {
         const balances = await erc1155View({
@@ -444,14 +355,6 @@ it(
 
             for (let block = 0; block < duration; block++) {
                 const height = (await warp.arweave.network.getInfo()).height;
-                console.log(`=============== ITERATION ${block} (${height}) ===============`);
-                console.log(`startedAt: ${startedAt}; block: ${block}; duration: ${duration}`);
-
-                console.log(">>>>>>>>>>>>>>> startedAt + block", startedAt + block);
-                console.log(
-                    ">>>>>>>>>>>>>>> actual height",
-                    (await warp.arweave.network.getInfo()).height,
-                );
 
                 const vault = await lockView({ function: "getVault", owner: target });
                 expectOk(vault);
