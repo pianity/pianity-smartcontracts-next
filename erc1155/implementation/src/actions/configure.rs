@@ -55,7 +55,7 @@ impl AsyncActionable for Configure {
                 .await;
         }
 
-        if let Some(can_evolve) = self.can_evolve {
+        if let Some(_can_evolve) = self.can_evolve {
             Ok(HandlerResult::Write(state))
         } else {
             Ok(HandlerResult::None(state))

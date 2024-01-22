@@ -95,12 +95,12 @@ pub fn current_state() -> JsValue {
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
     let current_state = STATE.with(|service| service.borrow().clone());
-    JsValue::from_serde(&current_state).unwrap()
+    serde_wasm_bindgen::to_value(&current_state).unwrap()
 }
 
 #[wasm_bindgen()]
 pub fn version() -> i32 {
-    return 1;
+    1
 }
 
 // Workaround for now to simplify type reading without as/loader or wasm-bindgen
@@ -111,5 +111,5 @@ pub fn version() -> i32 {
 // 5 = c
 #[wasm_bindgen]
 pub fn lang() -> i32 {
-    return 2;
+    2
 }

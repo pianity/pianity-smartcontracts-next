@@ -4,13 +4,12 @@ use warp_erc1155::action::{ActionResult, HandlerResult, Transfer};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::Parameters as StateLegacy;
 
-use crate::contract_utils::js_imports::log;
 use crate::{
+    actions::{approval::is_approved_for_all_internal, AsyncActionable},
+    contract_utils::js_imports::log,
     state::{Balance, KvState},
     utils::is_op,
 };
-
-use super::{is_approved_for_all_internal, AsyncActionable};
 
 #[async_trait(?Send)]
 impl AsyncActionable for Transfer {

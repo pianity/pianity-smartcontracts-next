@@ -4,7 +4,7 @@ use syn::{
     self,
     parse::{Parse, ParseStream},
     parse_macro_input, Attribute, AttributeArgs, DataStruct, DeriveInput, Ident, Meta, NestedMeta,
-    Type, Visibility,
+    Type,
 };
 
 struct MacroArgs {
@@ -207,7 +207,6 @@ fn gen_field_peek(
 
 fn create_peek_struct(
     struct_data: &DataStruct,
-    struct_visibility: &Visibility,
     struct_ident: &Ident,
     macro_args: &MacroArgs,
 ) -> TokenStream {
@@ -257,8 +256,6 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
         syn::Data::Struct(data) => data,
         _ => panic!("Only structs are supported"),
     };
-
-    let root_struct_vis = &ast.vis;
 
     let root_struct_name = &ast.ident;
 
@@ -781,8 +778,7 @@ fn impl_kv_storage(ast: &syn::DeriveInput, macro_args: MacroArgs) -> TokenStream
         (storage, storage_items)
     };
 
-    let peek_struct =
-        create_peek_struct(root_struct, root_struct_vis, root_struct_name, &macro_args);
+    let peek_struct = create_peek_struct(root_struct, root_struct_name, &macro_args);
 
     let gen = quote! {
         #storage

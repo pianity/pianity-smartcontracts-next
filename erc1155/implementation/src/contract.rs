@@ -4,7 +4,6 @@ use warp_erc1155::action::{Action, ActionResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::Parameters;
 
-use crate::contract_utils::js_imports::log;
 use crate::{
     actions::AsyncActionable,
     contract_utils::js_imports::{SmartWeave, Transaction},
@@ -12,14 +11,14 @@ use crate::{
 };
 
 pub fn allowed_in_pause(action: &Action) -> bool {
-    match action {
-        Action::Configure(_) => true,
-        Action::GetToken(_) => true,
-        Action::GetAllTokens(_) => true,
-        Action::BalanceOf(_) => true,
-        Action::ReadSettings(_) => true,
-        _ => false,
-    }
+    matches!(
+        action,
+        Action::Configure(_)
+            | Action::GetToken(_)
+            | Action::GetAllTokens(_)
+            | Action::BalanceOf(_)
+            | Action::ReadSettings(_)
+    )
 }
 
 pub async fn execute_action(

@@ -38,7 +38,7 @@ impl AsyncActionable for Initialize {
                             address.clone(),
                             Approvals {
                                 approves: HashMap::from_iter(approvals.approves.iter().map(
-                                    |(address, approved)| (address.clone(), approved.clone()),
+                                    |(address, approved)| (address.clone(), *approved),
                                 )),
                             },
                         )

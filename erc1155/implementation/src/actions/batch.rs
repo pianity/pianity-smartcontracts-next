@@ -5,9 +5,7 @@ use warp_erc1155::{
     state::Parameters,
 };
 
-use crate::contract::execute_action;
-
-use super::AsyncActionable;
+use crate::{actions::AsyncActionable, contract::execute_action};
 
 #[async_trait(?Send)]
 impl AsyncActionable for Batch {
@@ -62,54 +60,3 @@ impl AsyncActionable for Batch {
         }
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::collections::HashMap;
-//     use warp_erc1155::state::{BalancePrecision, Balances, Token};
-//
-//     #[test]
-//     fn batch_test() {
-//         fn to_balance(res: &ReadResponse) -> BalancePrecision {
-//             if let ReadResponse::Balance { balance, .. } = res {
-//                 return *balance;
-//             } else {
-//                 panic!()
-//             }
-//         }
-//
-//         let state = State {
-//             tokens: HashMap::from([(
-//                 "a".to_string(),
-//                 Token {
-//                     ticker: "a".to_owned(),
-//                     balances: HashMap::new(),
-//                 },
-//             )]),
-//             ..Default::default()
-//         };
-//
-//         let args = Batch {
-//             actions: vec![Action::BalanceOf {
-//                 token_id: "a".to_string(),
-//                 target: "a".to_string(),
-//             }],
-//         };
-//
-//         let expected_responses = vec![1];
-//         let result: HandlerResult = tokio_test::block_on(super::batch(state, args)).unwrap();
-//
-//         if let HandlerResult::Read(_, ReadResponse::Batch(responses)) = &result {
-//             let test = responses
-//                 .iter()
-//                 .zip(expected_responses)
-//                 .filter(|(res, b)| to_balance(res) == *b)
-//                 .count();
-//
-//             assert!(test > 0);
-//         } else {
-//             panic!()
-//         }
-//     }
-// }
