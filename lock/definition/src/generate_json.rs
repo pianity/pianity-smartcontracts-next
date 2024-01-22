@@ -16,7 +16,7 @@ mod tests {
         let schema_file = Path::new(SCHEMAS_DIR).join(name).with_extension("json");
 
         fs::create_dir_all(SCHEMAS_DIR)?;
-        fs::write(&schema_file, serde_json::to_string_pretty(&schema)?)?;
+        fs::write(schema_file, serde_json::to_string_pretty(&schema)?)?;
 
         Ok(())
     }

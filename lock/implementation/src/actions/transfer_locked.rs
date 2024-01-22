@@ -4,18 +4,18 @@ use serde::{Deserialize, Serialize};
 use warp_erc1155::{
     action::{self as Erc1155Action},
     error::ContractError as Erc1155ContractError,
-    state::{Balance, Parameters as Erc1155State},
+    state::{Balance},
 };
 
 use warp_lock::{
     action::{ActionResult, HandlerResult, ReleaseMethod, TransferLocked},
     error::ContractError,
-    state::{Cliff, Linear, LockedBalance, Parameters, UNIT},
+    state::{Cliff, Linear, LockedBalance, Parameters},
 };
-use wasm_bindgen::UnwrapThrowExt;
+
 
 use crate::{
-    actions::{Actionable, AsyncActionable},
+    actions::{AsyncActionable},
     contract_utils::js_imports::{Block, Contract},
 };
 use crate::{contract_utils::foreign_call::ForeignContractCaller, state::State};
@@ -48,8 +48,7 @@ impl AsyncActionable for TransferLocked {
                 &State::settings().erc1155().get().await,
                 transfer,
             )
-            .await
-            .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+            .await.map_err(ContractError::Erc1155Error)?;
 
         let current_block = Block::height();
 

@@ -119,8 +119,8 @@ impl AsyncActionable for Unlock {
                         let (transfer, new_balance) = locked_balance_to_transfer(
                             current_block,
                             &lock_account,
-                            &balance,
-                            &owner,
+                            balance,
+                            owner,
                         );
 
                         if let Some(transfer) = transfer {
@@ -190,14 +190,14 @@ impl AsyncActionable for Unlock {
         // }
 
         for (owner, new_balances) in new_vault {
-            if new_balances.len() == 0 {
+            if new_balances.is_empty() {
                 State::delete_vault(&owner).await;
             } else {
                 State::vault(&owner).set(&new_balances).await;
             }
         }
 
-        if transfers.len() > 0 {
+        if !transfers.is_empty() {
             foreign_caller
                 .write::<Erc1155ContractError, Erc1155Action::Action>(
                     &State::settings().erc1155().get().await,
@@ -207,8 +207,7 @@ impl AsyncActionable for Unlock {
                         })),
                     }),
                 )
-                .await
-                .or_else(|err| Err(ContractError::Erc1155Error(err)))?;
+                .await.map_err(ContractError::Erc1155Error)?;
         }
 
         Ok(HandlerResult::None(state))

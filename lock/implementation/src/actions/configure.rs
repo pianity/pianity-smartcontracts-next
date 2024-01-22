@@ -6,21 +6,19 @@ use warp_lock::{
 };
 
 use crate::{
-    actions::Actionable,
+    actions::AsyncActionable,
     contract_utils::foreign_call::ForeignContractCaller,
     state::State,
     utils::{is_op, is_super_op},
 };
-
-use super::AsyncActionable;
 
 #[async_trait(?Send)]
 impl AsyncActionable for Configure {
     async fn action(
         self,
         caller: String,
-        mut state: Parameters,
-        foreign_caller: &mut ForeignContractCaller,
+        state: Parameters,
+        _foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {
         let is_super_op = is_super_op(&caller).await;
         let is_op = is_op(&caller).await;
@@ -52,6 +50,10 @@ impl AsyncActionable for Configure {
             State::settings().erc1155().set(&erc1155).await;
         }
 
-        return Ok(HandlerResult::None(state));
+        if let Some(_) = self.can_evolve {
+            Ok(HandlerResult::Write(state))
+        } else {
+            Ok(HandlerResult::None(state))
+        }
     }
 }

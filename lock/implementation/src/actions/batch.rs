@@ -13,7 +13,7 @@ use super::AsyncActionable;
 impl AsyncActionable for Batch {
     async fn action(
         self,
-        caller: String,
+        _caller: String,
         mut state: Parameters,
         foreign_caller: &mut ForeignContractCaller,
     ) -> ActionResult {

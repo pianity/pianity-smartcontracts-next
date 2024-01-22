@@ -14,11 +14,7 @@ use crate::{
 };
 
 pub fn is_action_read(action: &Action) -> bool {
-    match action {
-        Action::GetVault(_) => true,
-        Action::GetAllVaults(_) => true,
-        _ => false,
-    }
+    matches!(action, Action::GetVault(_) | Action::GetAllVaults(_))
 }
 
 pub fn allowed_in_pause(action: &Action) -> bool {
@@ -56,7 +52,7 @@ pub async fn handle(
         return Err(ContractError::UnauthorizedAddress(direct_caller));
     }
 
-    let result = match action {
+    match action {
         Action::Initialize(_) => Err(ContractError::ContractAlreadyInitialized),
         Action::GetVault(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::GetAllVaults(action) => action.action(direct_caller, state, foreign_caller).await,
@@ -65,7 +61,5 @@ pub async fn handle(
         Action::Configure(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Evolve(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Batch(action) => action.action(direct_caller, state, foreign_caller).await,
-    };
-
-    result
+    }
 }
