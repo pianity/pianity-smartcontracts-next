@@ -95,7 +95,8 @@ pub fn current_state() -> JsValue {
     // "This is unlikely to be super speedy so it's not recommended for large payload"
     // - we should minimize calls to from_serde
     let current_state = STATE.with(|service| service.borrow().clone());
-    serde_wasm_bindgen::to_value(&current_state).unwrap()
+    let serializer = serde_wasm_bindgen::Serializer::json_compatible();
+    current_state.serialize(&serializer).unwrap()
 }
 
 #[wasm_bindgen()]
