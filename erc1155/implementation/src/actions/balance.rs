@@ -7,16 +7,16 @@ use warp_erc1155::{
 
 use crate::actions::AsyncActionable;
 
-use crate::state::{Balance, KvState};
+use crate::state::{Balance, State};
 
 #[async_trait(?Send)]
 impl AsyncActionable for BalanceOf {
     async fn action(self, _caller: String, state: Parameters) -> ActionResult {
         let token_id = self
             .token_id
-            .unwrap_or(KvState::settings().default_token().get().await);
+            .unwrap_or(State::settings().default_token().get().await);
 
-        let balance = KvState::tokens(&token_id)
+        let balance = State::tokens(&token_id)
             .ok_or(ContractError::TokenNotFound(token_id.clone()))
             .await?
             .balances(&self.target)

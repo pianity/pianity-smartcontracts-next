@@ -7,7 +7,7 @@ use warp_erc1155::state::Parameters as StateLegacy;
 use crate::{
     actions::{approval::is_approved_for_all_internal, AsyncActionable},
     contract_utils::js_imports::log,
-    state::{Balance, KvState},
+    state::{Balance, State},
     utils::is_op,
 };
 
@@ -25,13 +25,13 @@ impl AsyncActionable for Transfer {
         };
 
         if !is_approved_for_all_internal(&caller, &from).await
-            || (!KvState::settings().allow_free_transfer().get().await && !is_op(&from).await)
+            || (!State::settings().allow_free_transfer().get().await && !is_op(&from).await)
         {
             return Err(ContractError::UnauthorizedAddress(caller));
         }
 
         if from != caller
-            && !KvState::approvals(&from)
+            && !State::approvals(&from)
                 .peek()
                 .approves(&caller)
                 .await
@@ -46,9 +46,9 @@ impl AsyncActionable for Transfer {
 
         let token_id = self
             .token_id
-            .unwrap_or(KvState::settings().default_token().get().await);
+            .unwrap_or(State::settings().default_token().get().await);
 
-        let token = KvState::tokens(&token_id)
+        let token = State::tokens(&token_id)
             .ok_or(ContractError::TokenNotFound(token_id.clone()))
             .await?;
 

@@ -12,13 +12,13 @@ use crate::{
     state::{Approvals, Settings, Token},
 };
 
-use crate::state::{Balance, KvState};
+use crate::state::{Balance, State};
 
 #[async_trait(?Send)]
 impl AsyncActionable for Initialize {
     async fn action(self, _caller: String, mut parameters: Parameters) -> ActionResult {
         if let Some(init_state) = parameters.initial_state {
-            let state = &KvState {
+            let state = &State {
                 ticker_nonce: init_state.ticker_nonce,
                 tokens: HashMap::from_iter(init_state.tokens.iter().map(|(id, token)| {
                     (
@@ -37,9 +37,12 @@ impl AsyncActionable for Initialize {
                         (
                             address.clone(),
                             Approvals {
-                                approves: HashMap::from_iter(approvals.approves.iter().map(
-                                    |(address, approved)| (address.clone(), *approved),
-                                )),
+                                approves: HashMap::from_iter(
+                                    approvals
+                                        .approves
+                                        .iter()
+                                        .map(|(address, approved)| (address.clone(), *approved)),
+                                ),
                             },
                         )
                     },
@@ -54,7 +57,7 @@ impl AsyncActionable for Initialize {
                 },
             };
 
-            KvState::init(state).await;
+            State::init(state).await;
 
             parameters.initial_state = None;
 

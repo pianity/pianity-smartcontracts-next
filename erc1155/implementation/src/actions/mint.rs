@@ -9,7 +9,7 @@ use warp_erc1155::{
 use crate::{
     actions::AsyncActionable,
     contract_utils::js_imports::Transaction,
-    state::{KvState, Token},
+    state::{State, Token},
     utils::is_op,
 };
 
@@ -33,10 +33,10 @@ impl AsyncActionable for Mint {
 
         token_id.chars().all(|c| c.is_alphanumeric() || c == '-');
 
-        let default_token = KvState::settings().default_token().get().await;
-        let ticker_nonce = KvState::ticker_nonce().get().await;
+        let default_token = State::settings().default_token().get().await;
+        let ticker_nonce = State::ticker_nonce().get().await;
 
-        KvState::tokens(&token_id)
+        State::tokens(&token_id)
             .init(Token {
                 ticker: format!("{}{}", default_token, ticker_nonce),
                 tx_id: Some(Transaction::id()),
@@ -52,7 +52,7 @@ impl AsyncActionable for Mint {
             })
             .await;
 
-        KvState::ticker_nonce().map(|nonce| nonce + 1).await;
+        State::ticker_nonce().map(|nonce| nonce + 1).await;
 
         Ok(HandlerResult::Write(state))
     }

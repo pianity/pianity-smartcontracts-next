@@ -4,9 +4,9 @@ use warp_erc1155::action::{ActionResult, Configure, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::Parameters;
 
-use crate::state::KvState;
 use crate::{
     actions::AsyncActionable,
+    state::State,
     utils::{is_op, is_super_op},
 };
 
@@ -26,14 +26,14 @@ impl AsyncActionable for Configure {
         }
 
         if let Some(super_operators) = self.super_operators {
-            KvState::settings()
+            State::settings()
                 .super_operators()
                 .set(&super_operators)
                 .await;
         }
 
         if let Some(operators) = self.operators {
-            KvState::settings().operators().set(&operators).await;
+            State::settings().operators().set(&operators).await;
         }
 
         if let Some(can_evolve) = self.can_evolve {
@@ -41,21 +41,21 @@ impl AsyncActionable for Configure {
         }
 
         if let Some(proxies) = self.proxies {
-            KvState::settings().proxies().set(&proxies).await;
+            State::settings().proxies().set(&proxies).await;
         }
 
         if let Some(paused) = self.paused {
-            KvState::settings().paused().set(&paused).await;
+            State::settings().paused().set(&paused).await;
         }
 
         if let Some(allow_free_transfer) = self.allow_free_transfer {
-            KvState::settings()
+            State::settings()
                 .allow_free_transfer()
                 .set(&allow_free_transfer)
                 .await;
         }
 
-        if let Some(_can_evolve) = self.can_evolve {
+        if let Some(_) = self.can_evolve {
             Ok(HandlerResult::Write(state))
         } else {
             Ok(HandlerResult::None(state))

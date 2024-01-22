@@ -8,12 +8,12 @@ use warp_erc1155::{
 
 use crate::actions::AsyncActionable;
 
-use crate::state::KvState;
+use crate::state::State;
 
 #[async_trait(?Send)]
 impl AsyncActionable for GetAllTokens {
     async fn action(self, _caller: String, state: Parameters) -> ActionResult {
-        let kv_tokens = KvState::list_tokens().await;
+        let kv_tokens = State::list_tokens().await;
 
         let mut tokens = Vec::new();
         for (token_id, kv_token) in kv_tokens {

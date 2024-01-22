@@ -75,7 +75,7 @@ pub struct Settings {
 
 #[kv(impl = "Kv")]
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct KvState {
+pub struct State {
     pub ticker_nonce: u32,
     #[kv(map, subpath)]
     pub tokens: Token,

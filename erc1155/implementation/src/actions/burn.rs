@@ -5,7 +5,7 @@ use warp_erc1155::action::{ActionResult, Burn, HandlerResult};
 use warp_erc1155::error::ContractError;
 use warp_erc1155::state::Parameters;
 
-use crate::state::{Balance, KvState};
+use crate::state::{Balance, State};
 use crate::{actions::AsyncActionable, utils::is_op};
 
 #[async_trait(?Send)]
@@ -23,9 +23,9 @@ impl AsyncActionable for Burn {
 
         let token_id = self
             .token_id
-            .unwrap_or(KvState::settings().default_token().get().await);
+            .unwrap_or(State::settings().default_token().get().await);
 
-        let token = KvState::tokens(&token_id)
+        let token = State::tokens(&token_id)
             .ok_or(ContractError::TokenNotFound(token_id.clone()))
             .await?;
 
@@ -36,21 +36,6 @@ impl AsyncActionable for Burn {
             .unwrap_or(Balance::new(0))
             .value;
 
-        // if balance < self.qty.value {
-        //     return Err(ContractError::OwnerBalanceNotEnough(owner));
-        // } else if balance == self.qty.value {
-        //     token.delete_balances(&owner).await;
-        //
-        //     if token.count_balances().await == 0 {
-        //         KvState::delete_tokens(&token_id).await;
-        //     }
-        // } else {
-        //     token
-        //         .balances(&owner)
-        //         .map(|balance| Balance::new(balance.value - self.qty.value))
-        //         .await;
-        // }
-
         match balance.cmp(&self.qty.value) {
             Ordering::Less => {
                 return Err(ContractError::OwnerBalanceNotEnough(owner));
@@ -59,7 +44,7 @@ impl AsyncActionable for Burn {
                 token.delete_balances(&owner).await;
 
                 if token.count_balances().await == 0 {
-                    KvState::delete_tokens(&token_id).await;
+                    State::delete_tokens(&token_id).await;
                 }
             }
             _ => {

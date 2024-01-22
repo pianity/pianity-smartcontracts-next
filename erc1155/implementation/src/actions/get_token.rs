@@ -9,16 +9,16 @@ use warp_erc1155::{
 
 use crate::actions::AsyncActionable;
 
-use crate::state::KvState;
+use crate::state::State;
 
 #[async_trait(?Send)]
 impl AsyncActionable for GetToken {
     async fn action(self, _caller: String, state: Parameters) -> ActionResult {
         let token_id = self
             .token_id
-            .unwrap_or(KvState::settings().default_token().get().await);
+            .unwrap_or(State::settings().default_token().get().await);
 
-        let kv_token = KvState::tokens(&token_id)
+        let kv_token = State::tokens(&token_id)
             .ok_or(ContractError::TokenNotFound(token_id.clone()))
             .await?;
 

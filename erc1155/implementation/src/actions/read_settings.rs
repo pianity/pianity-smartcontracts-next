@@ -6,7 +6,7 @@ use warp_erc1155::{
 
 use crate::actions::AsyncActionable;
 
-use crate::state::KvState;
+use crate::state::State;
 
 #[async_trait(?Send)]
 impl AsyncActionable for ReadSettings {
@@ -14,12 +14,12 @@ impl AsyncActionable for ReadSettings {
         Ok(HandlerResult::Read(
             state,
             ReadResponse::ReadSettings(Settings {
-                default_token: KvState::settings().default_token().get().await,
-                paused: KvState::settings().paused().get().await,
-                super_operators: KvState::settings().super_operators().get().await,
-                operators: KvState::settings().operators().get().await,
-                proxies: KvState::settings().proxies().get().await,
-                allow_free_transfer: KvState::settings().allow_free_transfer().get().await,
+                default_token: State::settings().default_token().get().await,
+                paused: State::settings().paused().get().await,
+                super_operators: State::settings().super_operators().get().await,
+                operators: State::settings().operators().get().await,
+                proxies: State::settings().proxies().get().await,
+                allow_free_transfer: State::settings().allow_free_transfer().get().await,
             }),
         ))
     }

@@ -1,12 +1,12 @@
-use crate::state::KvState;
+use crate::state::State;
 
 pub async fn is_op(address: &str) -> bool {
-    KvState::settings()
+    State::settings()
         .operators()
         .get()
         .await
         .contains(&address.into())
-        || KvState::settings()
+        || State::settings()
             .super_operators()
             .get()
             .await
@@ -14,7 +14,7 @@ pub async fn is_op(address: &str) -> bool {
 }
 
 pub async fn is_super_op(address: &str) -> bool {
-    KvState::settings()
+    State::settings()
         .super_operators()
         .get()
         .await

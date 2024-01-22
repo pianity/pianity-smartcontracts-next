@@ -7,7 +7,7 @@ use warp_erc1155::state::Parameters;
 use crate::{
     actions::AsyncActionable,
     contract_utils::js_imports::{SmartWeave, Transaction},
-    state::KvState,
+    state::State,
 };
 
 pub fn allowed_in_pause(action: &Action) -> bool {
@@ -55,14 +55,14 @@ pub async fn handle(state: Parameters, action: Action) -> ActionResult {
         return Err(ContractError::ContractUninitialized);
     }
 
-    if !allowed_in_pause(&action) && KvState::settings().paused().get().await {
+    if !allowed_in_pause(&action) && State::settings().paused().get().await {
         return Err(ContractError::ContractIsPaused);
     }
 
     let (effective_caller, action) = if let Action::AsDirectCaller(action) = action {
         (direct_caller, action.action)
     } else {
-        let effective_caller = if KvState::settings()
+        let effective_caller = if State::settings()
             .proxies()
             .get()
             .await

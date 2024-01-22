@@ -7,13 +7,13 @@ use warp_erc1155::action::ReadResponse;
 use warp_erc1155::action::SetApprovalForAll;
 use warp_erc1155::state::Parameters;
 
-use crate::{actions::AsyncActionable, state::KvState};
+use crate::{actions::AsyncActionable, state::State};
 
 pub async fn is_approved_for_all_internal(operator: &str, owner: &str) -> bool {
     if operator == owner {
         true
     } else {
-        KvState::approvals(owner)
+        State::approvals(owner)
             .peek()
             .approves(operator)
             .await
@@ -40,7 +40,7 @@ impl AsyncActionable for IsApprovedForAll {
 #[async_trait(?Send)]
 impl AsyncActionable for SetApprovalForAll {
     async fn action(self, caller: String, state: Parameters) -> ActionResult {
-        KvState::approvals(&caller)
+        State::approvals(&caller)
             .init_default()
             .await
             .approves(&self.operator)
