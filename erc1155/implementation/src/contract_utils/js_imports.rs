@@ -127,7 +127,6 @@ impl KvStorage for Kv {
     }
 
     async fn del(key: &str) {
-        log(&format!("[erc1155] deleting key: \"{}\"", key));
         KvJs::del(key).await.unwrap();
     }
 
@@ -152,15 +151,7 @@ impl KvStorage for Kv {
         reverse: Option<bool>,
         limit: Option<u32>,
     ) -> Vec<String> {
-        let keys = KvJs::keys(gte, lt, reverse, limit).await;
-
-        log(&format!("[erc1155] getting keys: `{:?}`", keys));
-
-        let deser = serde_wasm_bindgen::from_value(keys.unwrap());
-
-        log(&format!("[erc1155] deserialized keys: `{:?}`", deser));
-
-        deser.unwrap()
+        serde_wasm_bindgen::from_value(KvJs::keys(gte, lt, reverse, limit).await.unwrap()).unwrap()
     }
 }
 

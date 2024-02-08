@@ -6,7 +6,6 @@ use warp_erc1155::state::Parameters as StateLegacy;
 
 use crate::{
     actions::{approval::is_approved_for_all_internal, AsyncActionable},
-    contract_utils::js_imports::log,
     state::{Balance, State},
     utils::is_op,
 };
@@ -25,19 +24,9 @@ impl AsyncActionable for Transfer {
         };
 
         if !is_approved_for_all_internal(&caller, &from).await
-            || (!State::settings().allow_free_transfer().get().await && !is_op(&from).await)
+            || (!State::settings().allow_free_transfer().get().await && !is_op(&caller).await)
         {
             return Err(ContractError::UnauthorizedAddress(caller));
-        }
-
-        if from != caller
-            && !State::approvals(&from)
-                .peek()
-                .approves(&caller)
-                .await
-                .unwrap_or(false)
-        {
-            return Err(ContractError::UnauthorizedTransfer(from));
         }
 
         if from == self.target {
@@ -59,24 +48,13 @@ impl AsyncActionable for Transfer {
             .unwrap_or(Balance::new(0));
 
         if from_balance.value < self.qty.value {
-            log(&format!(
-                "BALANCE TOO LOW transfer: {} -> {} of {}; owner has {}",
-                from, self.target, self.qty.value, from_balance.value
-            ));
             return Err(ContractError::OwnerBalanceNotEnough(from));
         }
-
-        log(&format!(
-            "transfer: {} -> {} of {}",
-            from, self.target, self.qty.value
-        ));
 
         let from_new_balance = Balance::new(from_balance.value - self.qty.value);
 
         if from_new_balance == Balance::new(0) {
-            log(&format!("[erc1155] removing balance for {}", from));
             token.delete_balances(&from).await;
-            // token.balances(&from).set(&Balance::new(0)).await;
         } else {
             token.balances(&from).set(&from_new_balance).await;
         }
@@ -90,13 +68,6 @@ impl AsyncActionable for Transfer {
 
         let target_balance = token.balances(&self.target).peek().await;
         let from_balance = token.balances(&from).peek().await;
-
-        log(&format!(
-            "updated balances:\n\
-            \t-> {}: {:?}\n\
-            \t-> {}: {:?}",
-            from, from_balance, self.target, target_balance
-        ));
 
         Ok(HandlerResult::None(state))
     }
