@@ -31,6 +31,7 @@ import { PgSortKeyCache, PgSortKeyCacheOptions } from "warp-contracts-postgres";
 let arlocal: Arlocal;
 let warp: Warp;
 
+let bank: Wallet;
 let op: Wallet;
 let user: Wallet;
 
@@ -41,29 +42,19 @@ let view: Viewer<Action, ReadResponse, State, ContractError>;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
-    LoggerFactory.INST.logLevel("error", "WASM:Rust");
-    // LoggerFactory.INST.logLevel("debug", "ContractHandler");
-
-    const cacheOpts = (tableName: string): PgSortKeyCacheOptions => ({
-        tableName,
-        host: "localhost",
-        port: 5432,
-        database: "warp",
-        user: "warp",
-        schemaName: "warpschema",
-        minEntriesPerKey: 1,
-        maxEntriesPerKey: 10000,
-    });
+    LoggerFactory.INST.logLevel("debug", "WASM:Rust");
+    LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
     arlocal = new Arlocal(1984, false, `./arlocal.erc1155.db`, false);
     await arlocal.start();
-    warp = WarpFactory.forLocal(1984, undefined, { inMemory: true, dbLocation: "/dev/null" })
-        .use(new DeployPlugin())
-        // NOTE: disabled because postgres' cache implementation of `keys` is broken
-        .useKVStorageFactory((contractTxId) => new PgSortKeyCache(cacheOpts(contractTxId)));
+    warp = WarpFactory.forLocal(1984, undefined, { inMemory: true, dbLocation: "/dev/null" }).use(
+        new DeployPlugin(),
+    );
+    bank = await generateWallet();
     op = await generateWallet();
     user = await generateWallet();
 
+    await warp.testing.addFunds(bank.jwk);
     await warp.testing.addFunds(op.jwk);
     await warp.testing.addFunds(user.jwk);
 
@@ -81,7 +72,7 @@ beforeAll(async () => {
             settings: {
                 defaultToken: "DOL",
                 paused: false,
-                superOperators: [op.address],
+                superOperators: [bank.address, op.address],
                 operators: [],
                 proxies: [],
                 allowFreeTransfer: true,
@@ -90,6 +81,7 @@ beforeAll(async () => {
                 DOL: {
                     ticker: "DOL",
                     balances: {
+                        [bank.address]: `99999999999999`,
                         [op.address]: `200`,
                         ...balances,
                     },
@@ -149,13 +141,52 @@ it("initialize contract", async () => {
 
     expectOk(await interact({ function: "initialize" }));
 
+    await warp.testing.mineBlock();
+    await warp.testing.mineBlock();
+    await warp.testing.mineBlock();
+    await warp.testing.mineBlock();
+    await warp.testing.mineBlock();
+
     const stateAfter = (await contract.readState()).cachedValue.state;
+    console.log(JSON.stringify(stateAfter, null, 2));
     expect(stateAfter.initialState).toBeNull();
+});
+
+it("non-operators are not allowed to transfer when allowFreeTransfer is false", async () => {
+    expectOk(
+        await interact({
+            function: "configure",
+            allowFreeTransfer: false,
+        }),
+    );
+
+    const transferResponse = await interact(
+        {
+            function: "transfer",
+            target: "burn",
+            tokenId: "DOL",
+            qty: "1",
+        },
+        { wallet: user.jwk },
+    );
+
+    expectError(transferResponse, {
+        kind: "UnauthorizedAddress",
+        data: user.address,
+    });
+
+    expectOk(
+        await interact({
+            function: "configure",
+            allowFreeTransfer: true,
+        }),
+    );
 });
 
 it("should get the default token", async () => {
     const token = await view({ function: "getToken" });
     expectOk(token);
+    expect(token.result[0]).toEqual("DOL");
 });
 
 it("fail if contract is already initialized", async () => {

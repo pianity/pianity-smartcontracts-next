@@ -29,15 +29,12 @@ export const UNIT = 1_000_000;
 export function expectOk(result: {
     type: InteractionResultType;
 }): asserts result is { type: "ok" } {
-    const stack = new Error().stack;
-
     try {
         expect(
             result?.type,
             `interaction isn't ok: ${JSON.stringify(result, undefined, 2)}`,
         ).toEqual("ok");
     } catch (error) {
-        console.log(stack);
         throw error;
     }
 }
@@ -46,12 +43,6 @@ export function expectError<ERROR, const NARROWED_ERROR extends ERROR | undefine
     result: { type: InteractionResultType; error?: ERROR },
     expectedError?: NARROWED_ERROR,
 ): asserts result is { type: "error"; error: NARROWED_ERROR } {
-    if (result?.type !== "error") {
-        console.log("interaction is ok:", JSON.stringify(result, undefined, 2));
-    }
-
-    const stack = new Error().stack;
-
     try {
         expect(
             result?.type,
@@ -62,7 +53,6 @@ export function expectError<ERROR, const NARROWED_ERROR extends ERROR | undefine
             expect((result as InteractionFailure<ERROR>).error).toEqual(expectedError);
         }
     } catch (error) {
-        console.log(stack);
         throw error;
     }
 }
@@ -264,7 +254,6 @@ export function createInteractor<ACTION, ERROR>(
 
         const now = Date.now();
         try {
-            console.log("CALLING WRITE INTERACTION");
             const interactionResult = await contract.writeInteraction(interaction, {
                 ...defaultOptions,
                 ...options,
@@ -335,9 +324,9 @@ export function createViewer<Action, Result, State, Error>(contract: Contract<St
         const view = await contract.viewState(action);
 
         if (view.type === "ok") {
-            return { type: "ok", result: (view.result as any)[action.function] };
+            return { type: "ok", result: (view.result as Results)[action.function] };
         } else {
-            return { type: "error", error: view.error as any };
+            return { type: "error", error: view.error as Error };
         }
     };
 }

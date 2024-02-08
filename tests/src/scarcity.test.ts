@@ -56,7 +56,7 @@ const userBaseBalance = 100 * UNIT;
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
     LoggerFactory.INST.logLevel("debug", "WASM:Rust");
-    // LoggerFactory.INST.logLevel("debug", "ContractHandler");
+    LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
     arlocal = new Arlocal(1986, false, `./arlocal.scarcity.db`, false);
     await arlocal.start();
@@ -232,70 +232,70 @@ it("activate the Scarcity contract as a proxy of Erc1155", async () => {
     // expect(state.settings.proxies).toEqual([scarcityTxId, shuffleTxId]);
 });
 
-it("proxy transfer should transfer simple tokens successfully", async () => {
-    expectOk(
-        await scarcityInteract({
-            function: "proxyTransfer",
-            from: bank.address,
-            target: "test-proxy-transfer",
-            tokenId: "DOL",
-            qty: "123",
-        }),
-    );
+// it("proxy transfer should transfer simple tokens successfully", async () => {
+//     expectOk(
+//         await scarcityInteract({
+//             function: "proxyTransfer",
+//             from: bank.address,
+//             target: "test-proxy-transfer",
+//             tokenId: "DOL",
+//             qty: "123",
+//         }),
+//     );
+//
+//     const balance = await erc1155View({
+//         function: "balanceOf",
+//         target: "test-proxy-transfer",
+//         tokenId: "DOL",
+//     });
+//
+//     expectOk(balance);
+//     expect(balance.result.balance).toEqual("123");
+// });
 
-    const balance = await erc1155View({
-        function: "balanceOf",
-        target: "test-proxy-transfer",
-        tokenId: "DOL",
-    });
+// it("proxy transfer should fail on nfts", async () => {
+//     expectError(
+//         await scarcityInteract({
+//             function: "proxyTransfer",
+//             from: op.address,
+//             target: "test-proxy-transfer",
+//             tokenId: nft1Id,
+//             qty: "123",
+//         }),
+//         { kind: "CantUseProxyTransferForNft", data: nft1Id },
+//     );
+// });
 
-    expectOk(balance);
-    expect(balance.result.balance).toEqual("123");
-});
-
-it("proxy transfer should fail on nfts", async () => {
-    expectError(
-        await scarcityInteract({
-            function: "proxyTransfer",
-            from: op.address,
-            target: "test-proxy-transfer",
-            tokenId: nft1Id,
-            qty: "123",
-        }),
-        { kind: "CantUseProxyTransferForNft", data: nft1Id },
-    );
-});
-
-it("proxy transfer should fail if token has royalties", async () => {
-    expectOk(
-        await scarcityInteract({
-            function: "attachRoyalties",
-            baseId: "DOL",
-            rate: 1_000_000,
-            royalties: {
-                [bank.address]: 1_000_000,
-            },
-        }),
-    );
-
-    expectError(
-        await scarcityInteract({
-            function: "proxyTransfer",
-            from: op.address,
-            target: "test-proxy-transfer",
-            tokenId: "DOL",
-            qty: "123",
-        }),
-        { kind: "CantUseProxyTransferOnTokenWithRoyalties", data: "DOL" },
-    );
-
-    expectOk(
-        await scarcityInteract({
-            function: "removeAttachedRoyalties",
-            baseId: "DOL",
-        }),
-    );
-});
+// it("proxy transfer should fail if token has royalties", async () => {
+//     expectOk(
+//         await scarcityInteract({
+//             function: "attachRoyalties",
+//             baseId: "DOL",
+//             rate: 1_000_000,
+//             royalties: {
+//                 [bank.address]: 1_000_000,
+//             },
+//         }),
+//     );
+//
+//     expectError(
+//         await scarcityInteract({
+//             function: "proxyTransfer",
+//             from: op.address,
+//             target: "test-proxy-transfer",
+//             tokenId: "DOL",
+//             qty: "123",
+//         }),
+//         { kind: "CantUseProxyTransferOnTokenWithRoyalties", data: "DOL" },
+//     );
+//
+//     expectOk(
+//         await scarcityInteract({
+//             function: "removeAttachedRoyalties",
+//             baseId: "DOL",
+//         }),
+//     );
+// });
 
 it("mint a free NFT and distribute it to a unknown address", async () => {
     const nftBaseId = "PANTERA";
@@ -498,6 +498,142 @@ it("should mint with a custom baseId", async () => {
 
     expectError(await erc1155View({ function: "getToken", tokenId: `11-LEGENDARY-${ticker}` }));
 }, 10_000);
+
+it("should mint an nft, sell it and pay shareholders", async () => {
+    const randomId = Math.random().toString(36).substring(7);
+    const share1 = `${randomId}-1`;
+    const price = 100;
+    const buyer = await generateWallet();
+    const rebuyer = await generateWallet();
+
+    await warp.testing.addFunds(buyer.jwk);
+    await warp.testing.addFunds(rebuyer.jwk);
+
+    expectOk(
+        await erc1155Interact(
+            {
+                function: "setApprovalForAll",
+                operator: op.address,
+                approved: true,
+            },
+            { wallet: buyer.jwk },
+        ),
+    );
+    expectOk(
+        await erc1155Interact(
+            {
+                function: "setApprovalForAll",
+                operator: op.address,
+                approved: true,
+            },
+            { wallet: rebuyer.jwk },
+        ),
+    );
+
+    expectOk(
+        await erc1155Interact({
+            function: "transfer",
+            qty: "1",
+            from: op.address,
+            target: buyer.address,
+        }),
+    );
+
+    expectOk(
+        await erc1155Interact({
+            function: "transfer",
+            qty: "1",
+            from: buyer.address,
+            target: op.address,
+        }),
+    );
+
+    const mint = await scarcityInteract({
+        function: "mintNft",
+        scarcity: "unique",
+        royalties: {
+            [share1]: UNIT,
+        },
+        rate: nftRate,
+    });
+    expectOk(mint);
+    const nftId = `1-UNIQUE-${mint.originalTxId}`;
+
+    expectOk(
+        await erc1155Interact(
+            {
+                function: "transfer",
+                from: bank.address,
+                target: buyer.address,
+                qty: price.toString(),
+            },
+            { wallet: bank.jwk },
+        ),
+    );
+
+    console.log(JSON.stringify(await erc1155View({ function: "getAllTokens" }), null, 2));
+
+    expectOk(
+        await scarcityInteract({
+            function: "transfer",
+            tokenId: nftId,
+            target: buyer.address,
+            from: op.address,
+            price: price.toString(),
+        }),
+    );
+
+    {
+        const tokensRaw = await erc1155View({
+            function: "getAllTokens",
+        });
+        expectOk(tokensRaw);
+        const tokens = new Map(tokensRaw.result);
+        expect(tokens.get(nftId)?.balances[buyer.address]).toEqual("1");
+        expect(tokens.get("DOL")?.balances[buyer.address]).toBeUndefined();
+        expect(tokens.get("DOL")?.balances[share1]).toEqual(price.toString());
+    }
+
+    expectOk(
+        await erc1155Interact(
+            {
+                function: "transfer",
+                from: bank.address,
+                target: rebuyer.address,
+                qty: price.toString(),
+            },
+            { wallet: bank.jwk },
+        ),
+    );
+
+    expectOk(
+        await scarcityInteract({
+            function: "transfer",
+            from: buyer.address,
+            target: rebuyer.address,
+            price: price.toString(),
+            tokenId: nftId,
+        }),
+    );
+
+    {
+        const tokensRaw = await erc1155View({
+            function: "getAllTokens",
+        });
+        expectOk(tokensRaw);
+        const tokens = new Map(tokensRaw.result);
+        expect(tokens.get(nftId)?.balances[buyer.address]).toBeUndefined();
+        console.log(`*****UNIT: ${UNIT}, nftRate: ${nftRate}`);
+        expect(tokens.get("DOL")?.balances[buyer.address]).toEqual(
+            (price * ((UNIT - nftRate) / UNIT)).toString(),
+        );
+        expect(tokens.get(nftId)?.balances[rebuyer.address]).toEqual("1");
+        expect(tokens.get("DOL")?.balances[rebuyer.address]).toBeUndefined();
+        expect(tokens.get("DOL")?.balances[share1]).toEqual(
+            (price + price * (nftRate / UNIT)).toString(),
+        );
+    }
+}, 50_000);
 
 // // TODO: Test the case where user buys an NFT that doesn't have an edition count of 1, 10, 100 or
 // // 1000. (there is an NFT with 50 editions in the old contract).

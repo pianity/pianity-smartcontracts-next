@@ -48,25 +48,14 @@ const userBaseBalance = 100 * UNIT;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
-    LoggerFactory.INST.logLevel("error", "WASM:Rust");
-    LoggerFactory.INST.logLevel("error", "ContractHandler");
-
-    const cacheOpts = (tableName: string): PgSortKeyCacheOptions => ({
-        tableName,
-        host: "localhost",
-        port: 5432,
-        database: "warp",
-        user: "warp",
-        schemaName: "warpschema",
-        minEntriesPerKey: 1,
-        maxEntriesPerKey: 10000,
-    });
+    LoggerFactory.INST.logLevel("debug", "WASM:Rust");
+    LoggerFactory.INST.logLevel("debug", "ContractHandler");
 
     arlocal = new Arlocal(1987, false, `./arlocal.lock.db`, false);
     await arlocal.start();
-    warp = WarpFactory.forLocal(1987, undefined, { inMemory: true, dbLocation: "/dev/null" })
-        .use(new DeployPlugin())
-        .useKVStorageFactory((contractTxId) => new PgSortKeyCache(cacheOpts(contractTxId)));
+    warp = WarpFactory.forLocal(1987, undefined, { inMemory: true, dbLocation: "/dev/null" }).use(
+        new DeployPlugin(),
+    );
     op = await generateWallet();
     user = await generateWallet();
     user2 = await generateWallet();
@@ -337,7 +326,7 @@ it(
 
         for (let i = 0; i < 50; i++) {
             const duration = Math.floor(Math.random() * 10) + 1;
-            const qty = Math.floor(Math.random() * 1000).toFixed();
+            const qty = Math.floor(Math.random() * 999999999).toFixed();
             const method = i % 2 === 0 ? "cliff" : "linear";
 
             const input: Lock.Actions["transferLocked"] = {
