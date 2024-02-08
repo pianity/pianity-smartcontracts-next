@@ -56,7 +56,8 @@ impl AsyncActionable for MintNft {
                 &State::settings().erc1155().get().await,
                 transaction_batch,
             )
-            .await.map_err(ContractError::Erc1155Error)?;
+            .await
+            .map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::None(state))
     }

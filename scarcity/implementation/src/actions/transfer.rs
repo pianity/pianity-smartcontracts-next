@@ -73,7 +73,8 @@ impl AsyncActionable for Transfer {
                     target: token_owner.clone(),
                     token_id: None,
                     qty: Balance::new(
-                        (self.price.value as f32 * (rate as f32 / UNIT as f32)) as BalancePrecision,
+                        (self.price.value as f32 * ((UNIT - rate) as f32 / UNIT as f32))
+                            as BalancePrecision,
                     ),
                 });
             }
@@ -114,7 +115,8 @@ impl AsyncActionable for Transfer {
                 &State::settings().erc1155().get().await,
                 Erc1155Action::Action::Batch(Erc1155Action::Batch { actions: transfers }),
             )
-            .await.map_err(ContractError::Erc1155Error)?;
+            .await
+            .map_err(ContractError::Erc1155Error)?;
 
         Ok(HandlerResult::Write(state))
     }
