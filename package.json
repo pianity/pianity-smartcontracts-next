@@ -10,7 +10,7 @@
     ],
     "scripts": {
         "build": "yarn build-contracts && yarn gen-bindings",
-        "build-contracts": "yarn workspaces foreach --exclude root -vitp run build",
+        "build-contracts": "yarn workspaces foreach --exclude root -vitp run build-prod",
         "gen-bindings": "yarn workspaces foreach --exclude root -vitp run gen-bindings",
         "test": "yarn workspace tests run test"
     },
@@ -27,7 +27,6 @@
         "koumu": "0.1.0"
     },
     "resolutions": {
-        "warp-contracts": "portal:/home/noom/dev/pianity/warp",
         "arweave": "1.13.7"
     }
 }
