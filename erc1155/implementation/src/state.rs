@@ -32,6 +32,7 @@ mod string {
 pub type BalancePrecision = u64;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Default, Debug, Hash, PartialEq, Eq)]
+#[serde(transparent)]
 pub struct Balance {
     #[serde(with = "string")]
     pub value: BalancePrecision,
