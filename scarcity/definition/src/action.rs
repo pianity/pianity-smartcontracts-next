@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use warp_erc1155::{state::Balance};
+use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
 use crate::state::{AttachedRoyalties, Parameters, Royalties};
@@ -42,15 +42,20 @@ pub struct RemoveAttachedRoyalties {
     pub base_id: String,
 }
 
-// TODO: This code is mostly duplicated from the Shuffle contract. It should be refactored to be
-// shared instead.
 #[derive(JsonSchema, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+pub struct LimitedAmount {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amount: Option<u32>,
+}
+
+#[derive(JsonSchema, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "scarcity")]
 pub enum Scarcity {
     Unique,
     Legendary,
     Epic,
     Rare,
+    Limited(LimitedAmount),
 }
 
 impl TryFrom<&str> for Scarcity {
@@ -62,6 +67,7 @@ impl TryFrom<&str> for Scarcity {
             "LEGENDARY" => Ok(Self::Legendary),
             "EPIC" => Ok(Self::Epic),
             "RARE" => Ok(Self::Rare),
+            "LIMITED" => Ok(Self::Limited(LimitedAmount { amount: None })),
             _ => Err(()),
         }
     }
@@ -74,17 +80,19 @@ impl ToString for Scarcity {
             Scarcity::Legendary => "LEGENDARY".to_string(),
             Scarcity::Epic => "EPIC".to_string(),
             Scarcity::Rare => "RARE".to_string(),
+            Scarcity::Limited(_) => "LIMITED".to_string(),
         }
     }
 }
 
-impl From<&Scarcity> for u32 {
+impl From<&Scarcity> for Option<u32> {
     fn from(scarcity: &Scarcity) -> Self {
         match scarcity {
-            Scarcity::Unique => 1,
-            Scarcity::Legendary => 10,
-            Scarcity::Epic => 100,
-            Scarcity::Rare => 1000,
+            Scarcity::Unique => Some(1),
+            Scarcity::Legendary => Some(10),
+            Scarcity::Epic => Some(100),
+            Scarcity::Rare => Some(1000),
+            Scarcity::Limited(LimitedAmount { amount }) => *amount,
         }
     }
 }

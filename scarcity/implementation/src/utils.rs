@@ -63,15 +63,17 @@ impl TryFrom<&str> for NftId {
             .parse::<u32>()
             .map_err(|_| NftIdParseError::Edition)?;
 
-        if edition > u32::from(&scarcity) {
-            Err(NftIdParseError::Edition)
-        } else {
-            Ok(Self {
-                base_id: splited.2.to_string(),
-                scarcity,
-                edition,
-            })
+        if !matches!(scarcity, Scarcity::Limited(_)) {
+            if edition > Option::<u32>::from(&scarcity).unwrap() {
+                return Err(NftIdParseError::Edition);
+            }
         }
+
+        Ok(Self {
+            base_id: splited.2.to_string(),
+            scarcity,
+            edition,
+        })
     }
 }
 

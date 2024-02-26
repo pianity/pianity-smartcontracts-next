@@ -28,8 +28,10 @@ impl AsyncActionable for MintNft {
     ) -> ActionResult {
         let mut mints = Vec::new();
 
-        let (scarcity_name, editions_count): (String, u32) =
-            (self.scarcity.to_string(), (&self.scarcity).into());
+        let (scarcity_name, editions_count): (String, u32) = (
+            self.scarcity.to_string(),
+            Into::<Option<u32>>::into(&self.scarcity).unwrap_or(1),
+        );
 
         attach_royalties_internal(&AttachRoyalties {
             base_id: self.base_id.clone().unwrap_or_else(Transaction::id),
