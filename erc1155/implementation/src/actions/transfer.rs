@@ -66,9 +66,6 @@ impl AsyncActionable for Transfer {
             .map(|target_balance| Balance::new(target_balance.value + self.qty.value))
             .await;
 
-        let target_balance = token.balances(&self.target).peek().await;
-        let from_balance = token.balances(&from).peek().await;
-
         Ok(HandlerResult::None(state))
     }
 }
