@@ -3,10 +3,7 @@ import Arlocal from "arlocal";
 import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 
-import { Parameters as Erc1155State } from "erc1155/State";
-import { ContractError as Erc1155Error } from "erc1155/ContractError";
-import { Action as Erc1155Action } from "erc1155/Action";
-import { ReadResponse as Erc1155ReadResponse } from "erc1155/ReadResponse";
+import * as Erc1155 from "erc1155/index";
 import * as Lock from "lock/index";
 
 import {
@@ -23,7 +20,6 @@ import {
 } from "@/utils";
 import { DeployPlugin } from "warp-contracts-plugin-deploy";
 import BigNumber from "bignumber.js";
-import { PgSortKeyCache, PgSortKeyCacheOptions } from "warp-contracts-postgres";
 
 let arlocal: Arlocal;
 let warp: Warp;
@@ -33,10 +29,15 @@ let user: Wallet;
 let bank: Wallet;
 let user2: Wallet;
 
-let erc1155Contract: Contract<Erc1155State>;
+let erc1155Contract: Contract<Erc1155.Parameters>;
 let erc1155TxId: string;
-let erc1155Interact: Interactor<Erc1155Action, Erc1155Error>;
-let erc1155View: Viewer<Erc1155Action, Erc1155ReadResponse, Erc1155State, Erc1155Error>;
+let erc1155Interact: Interactor<Erc1155.Action, Erc1155.ContractError>;
+let erc1155View: Viewer<
+    Erc1155.Action,
+    Erc1155.ReadResponse,
+    Erc1155.Parameters,
+    Erc1155.ContractError
+>;
 
 let lockContract: Contract<Lock.Parameters>;
 let lockTxId: string;
@@ -66,7 +67,7 @@ beforeAll(async () => {
     await warp.testing.addFunds(user2.jwk);
     await warp.testing.addFunds(bank.jwk);
 
-    const erc1155InitState: Erc1155State = {
+    const erc1155InitState: Erc1155.Parameters = {
         name: "TEST-ERC1155",
         initialState: {
             settings: {
@@ -101,17 +102,24 @@ beforeAll(async () => {
 
     erc1155TxId = (await deployContract(warp, op.jwk, "erc1155", erc1155InitState)).contractTxId;
     erc1155Contract = warp
-        .contract<Erc1155State>(erc1155TxId)
+        .contract<Erc1155.Parameters>(erc1155TxId)
         .setEvaluationOptions({
             internalWrites: true,
             throwOnInternalWriteError: false,
             mineArLocalBlocks: false,
         })
         .connect(op.jwk);
-    erc1155Interact = createInteractor<Erc1155Action, Erc1155Error>(warp, erc1155Contract, op.jwk);
-    erc1155View = createViewer<Erc1155Action, Erc1155ReadResponse, Erc1155State, Erc1155Error>(
+    erc1155Interact = createInteractor<Erc1155.Action, Erc1155.ContractError>(
+        warp,
         erc1155Contract,
+        op.jwk,
     );
+    erc1155View = createViewer<
+        Erc1155.Action,
+        Erc1155.ReadResponse,
+        Erc1155.Parameters,
+        Erc1155.ContractError
+    >(erc1155Contract);
 
     const lockInitState: Lock.Parameters = {
         name: "TEST-LOCK",

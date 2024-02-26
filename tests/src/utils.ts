@@ -261,7 +261,6 @@ export function createInteractor<ACTION, ERROR>(
             console.log("interaction took", Date.now() - now, "ms");
 
             if (options.mine) {
-                console.log("MINING A BLOCK");
                 await warp.testing.mineBlock();
             }
 

@@ -3,13 +3,8 @@ import Arlocal from "arlocal";
 import { Contract, LoggerFactory, Warp, WarpFactory } from "warp-contracts";
 import { Wallet } from "warp-contracts/lib/types/contract/testing/Testing";
 import { DeployPlugin } from "warp-contracts-plugin-deploy";
-import BigNumber from "bignumber.js";
-import { EthereumSigner } from "arbundles";
 
-import { Parameters as State, Token } from "erc1155/State";
-import { Action } from "erc1155/Action";
-import { ReadResponse } from "erc1155/ReadResponse";
-import { ContractError } from "erc1155/ContractError";
+import * as Erc1155 from "erc1155/index";
 
 import {
     createInteractor,
@@ -35,10 +30,10 @@ let bank: Wallet;
 let op: Wallet;
 let user: Wallet;
 
-let contract: Contract<State>;
+let contract: Contract<Erc1155.Parameters>;
 let contractId: string;
-let interact: Interactor<Action, ContractError>;
-let view: Viewer<Action, ReadResponse, State, ContractError>;
+let interact: Interactor<Erc1155.Action, Erc1155.ContractError>;
+let view: Viewer<Erc1155.Action, Erc1155.ReadResponse, Erc1155.Parameters, Erc1155.ContractError>;
 
 beforeAll(async () => {
     LoggerFactory.INST.logLevel("error");
@@ -65,7 +60,7 @@ beforeAll(async () => {
 
     console.log("deploying contract...");
     const time = Date.now();
-    const initState: State = {
+    const initState: Erc1155.Parameters = {
         name: "TEST-ERC1155",
         initialState: {
             tickerNonce: 0,
@@ -96,7 +91,7 @@ beforeAll(async () => {
     contractId = (await deployContract(warp, op.jwk, "erc1155", initState)).contractTxId;
     console.log("contract deployed in ", (Date.now() - time) / 1000, "seconds");
     contract = warp
-        .contract<State>(contractId)
+        .contract<Erc1155.Parameters>(contractId)
         .setEvaluationOptions({
             useKVStorage: true,
             internalWrites: true,
@@ -104,8 +99,13 @@ beforeAll(async () => {
             // throwOnInternalWriteError: false,
         })
         .connect(op.jwk);
-    interact = createInteractor<Action, ContractError>(warp, contract, op.jwk);
-    view = createViewer<Action, ReadResponse, State, ContractError>(contract);
+    interact = createInteractor<Erc1155.Action, Erc1155.ContractError>(warp, contract, op.jwk);
+    view = createViewer<
+        Erc1155.Action,
+        Erc1155.ReadResponse,
+        Erc1155.Parameters,
+        Erc1155.ContractError
+    >(contract);
 
     console.log("OP:", op.address, "\nUSER:", user.address, "\nERC1155:", contractId);
 }, 120_000);
@@ -114,7 +114,7 @@ afterAll(async () => {
     await arlocal.stop();
 });
 
-function calculateTotalQty(token: Token): string {
+function calculateTotalQty(token: Erc1155.Token): string {
     return (
         Object.values(token.balances)
             // TODO: Use BigInt instead of parseInt
@@ -141,14 +141,7 @@ it("initialize contract", async () => {
 
     expectOk(await interact({ function: "initialize" }));
 
-    await warp.testing.mineBlock();
-    await warp.testing.mineBlock();
-    await warp.testing.mineBlock();
-    await warp.testing.mineBlock();
-    await warp.testing.mineBlock();
-
     const stateAfter = (await contract.readState()).cachedValue.state;
-    console.log(JSON.stringify(stateAfter, null, 2));
     expect(stateAfter.initialState).toBeNull();
 });
 
