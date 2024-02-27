@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use warp_erc1155::action::Transfer as Erc1155Transfer;
 use warp_erc1155::state::Balance;
 
 use crate::error::ContractError;
@@ -108,6 +109,15 @@ pub struct MintNft {
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ProxyTransfer {
+    pub from: Option<String>,
+    pub target: String,
+    pub token_id: String,
+    pub qty: Balance,
+}
+
+#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Transfer {
     pub from: String,
     pub target: String,
@@ -150,6 +160,7 @@ pub enum Action {
     RemoveAttachedRoyalties(RemoveAttachedRoyalties),
     MintNft(MintNft),
     Transfer(Transfer),
+    ProxyTransfer(ProxyTransfer),
     Configure(Configure),
     Evolve(Evolve),
     Batch(Batch),

@@ -51,7 +51,9 @@ pub async fn handle(state: Parameters, action: Action) -> ActionResult {
 
     if let Action::Initialize(initialize) = action {
         return initialize.action(direct_caller, state).await;
-    } else if state.initial_state.is_some() {
+    }
+
+    if state.initial_state.is_some() {
         return Err(ContractError::ContractUninitialized);
     }
 

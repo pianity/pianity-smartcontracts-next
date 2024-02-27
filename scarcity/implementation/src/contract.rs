@@ -36,7 +36,9 @@ pub async fn handle(
         return initialize
             .action(direct_caller, state, foreign_caller)
             .await;
-    } else if state.initial_state.is_some() {
+    }
+
+    if state.initial_state.is_some() {
         return Err(ContractError::ContractUninitialized);
     }
 
@@ -68,6 +70,7 @@ pub async fn handle(
             action.action(direct_caller, state, foreign_caller).await
         }
         Action::Transfer(action) => action.action(direct_caller, state, foreign_caller).await,
+        Action::ProxyTransfer(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Configure(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Evolve(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Batch(action) => action.action(direct_caller, state, foreign_caller).await,

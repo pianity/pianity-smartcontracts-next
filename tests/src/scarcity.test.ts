@@ -117,6 +117,11 @@ beforeAll(async () => {
                         [op.address]: true,
                     },
                 },
+                [bank.address]: {
+                    approves: {
+                        [op.address]: true,
+                    },
+                },
             },
         },
     };
@@ -241,9 +246,58 @@ it("activate the Scarcity contract as a proxy of Erc1155", async () => {
     const settings = await erc1155View({ function: "readSettings" });
     expectOk(settings);
     expect(settings.result.proxies).toEqual([scarcityTxId]);
+});
 
-    // const { state } = (await erc1155Contract.readState()).cachedValue;
-    // expect(state.settings.proxies).toEqual([scarcityTxId, shuffleTxId]);
+it("proxy transfer should transfer simple tokens successfully", async () => {
+    expectOk(
+        await scarcityInteract({
+            function: "proxyTransfer",
+            target: "test-proxy-transfer",
+            from: bank.address,
+            tokenId: "DOL",
+            qty: "123",
+        }),
+    );
+
+    const balance = await erc1155View({
+        function: "balanceOf",
+        target: "test-proxy-transfer",
+        tokenId: "DOL",
+    });
+
+    expectOk(balance);
+    expect(balance.result.balance).toEqual("123");
+});
+
+it("proxy transfer should fail if token has royalties", async () => {
+    expectOk(
+        await scarcityInteract({
+            function: "attachRoyalties",
+            baseId: "DOL",
+            rate: 1_000_000,
+            royalties: {
+                [bank.address]: 1_000_000,
+            },
+        }),
+    );
+
+    expectError(
+        await scarcityInteract({
+            function: "proxyTransfer",
+            from: op.address,
+            target: "test-proxy-transfer",
+            tokenId: "DOL",
+            qty: "123",
+        }),
+        { kind: "CantUseProxyTransferOnTokenWithRoyalties", data: "DOL" },
+    );
+
+    expectOk(
+        await scarcityInteract({
+            function: "removeAttachedRoyalties",
+            baseId: "DOL",
+        }),
+    );
 });
 
 it("fail to transfer an NFT that has an edition larger than its scarcity allows", async () => {
@@ -286,7 +340,7 @@ it("fail to transfer an NFT that has an edition larger than its scarcity allows"
     });
 });
 
-it("transfer an NFT that has an edition larger than its scarcity allows", async () => {
+it("fail to transfer an NFT that has an edition larger than its scarcity allows", async () => {
     const nftPrefix = "2-UNIQUE";
     const mint = await erc1155Interact({
         function: "mint",

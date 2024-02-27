@@ -47,15 +47,6 @@ impl AsyncActionable for SetApprovalForAll {
             .set(&self.approved)
             .await;
 
-        // if let Some(approved_ops) = state.approvals.get_mut(&caller) {
-        //     approved_ops.insert(self.operator, self.approved);
-        // } else {
-        //     let mut approved_ops = HashMap::new();
-        //     approved_ops.insert(self.operator, self.approved);
-        //
-        //     state.approvals.insert(caller, approved_ops);
-        // };
-
         Ok(HandlerResult::None(state))
     }
 }
