@@ -60,6 +60,4 @@ pub enum ContractError {
     ContractAlreadyInitialized,
     RoyaltiesNotChanged,
     RoyaltiesUnchanged,
-
-    CantUseProxyTransferOnTokenWithRoyalties(String),
 }

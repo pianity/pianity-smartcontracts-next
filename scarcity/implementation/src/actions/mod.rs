@@ -11,7 +11,6 @@ pub mod get_all_royalties;
 pub mod get_royalties;
 pub mod initialize;
 pub mod mint_nft;
-pub mod proxy_transfer;
 pub mod remove_attached_royalties;
 pub mod transfer;
 

@@ -70,7 +70,6 @@ pub async fn handle(
             action.action(direct_caller, state, foreign_caller).await
         }
         Action::Transfer(action) => action.action(direct_caller, state, foreign_caller).await,
-        Action::ProxyTransfer(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Configure(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Evolve(action) => action.action(direct_caller, state, foreign_caller).await,
         Action::Batch(action) => action.action(direct_caller, state, foreign_caller).await,
