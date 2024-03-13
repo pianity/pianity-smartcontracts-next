@@ -84,6 +84,11 @@ impl AsyncActionable for Transfer {
                 .royalties
                 .iter()
                 .for_each(|(address, royalty_share)| {
+                    // Skip paying the shareholder if they are the buyer themselves
+                    if self.target == *address {
+                        return;
+                    }
+
                     let royalty_amount = (self.price.value as f32
                         * (*royalty_share as f32 / (UNIT as f32 * (UNIT as f32 / rate as f32))))
                         as BalancePrecision;
