@@ -248,6 +248,55 @@ it("activate the Scarcity contract as a proxy of Erc1155", async () => {
     expect(settings.result.proxies).toEqual([scarcityTxId]);
 });
 
+it("mint an NFT with the buyer in the royalties", async () => {
+    const buyer = await generateWallet();
+    await warp.testing.addFunds(buyer.jwk);
+
+    expectOk(
+        await erc1155Interact(
+            {
+                function: "setApprovalForAll",
+                operator: op.address,
+                approved: true,
+            },
+            { wallet: buyer.jwk },
+        ),
+    );
+
+    expectOk(
+        await erc1155Interact({
+            function: "transfer",
+            from: bank.address,
+            target: buyer.address,
+            qty: "100",
+        }),
+    );
+
+    const result = await scarcityInteract({
+        function: "mintNft",
+        scarcity: { scarcity: "unique" },
+        rate: 1_000_000,
+        royalties: {
+            [bank.address]: 500_000,
+            [buyer.address]: 500_000,
+        },
+    });
+
+    expectOk(result);
+
+    const nftBaseId = result.originalTxId;
+
+    expectOk(
+        await scarcityInteract({
+            function: "transfer",
+            from: op.address,
+            target: buyer.address,
+            tokenId: `1-UNIQUE-${nftBaseId}`,
+            price: "29",
+        }),
+    );
+}, 60_000);
+
 it("fail to transfer an NFT that has an edition larger than its scarcity allows", async () => {
     const nftPrefix = "2-UNIQUE";
     const mint = await erc1155Interact({
